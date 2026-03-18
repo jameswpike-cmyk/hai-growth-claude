@@ -7,7 +7,7 @@ BigQuery semantic data layer for the Handshake AI Growth team. This is a [Claude
 Provides Claude with context to query and analyze:
 - **Fellow performance** — approval rates, TIC, AHT, reviewer metrics (R1/R2)
 - **Project funnels** — onboarding, pipeline state, project lifecycle
-- **Marketing & campaigns** — Otter/Feather, Meta/Google/LinkedIn/Reddit ads, UTM tracking, CPA
+- **Marketing & campaigns** — Meta/Google/LinkedIn/Reddit ads, UTM tracking, CPA
 - **Fellow profiles** — eligibility, resume data, fellow search/matching
 - **Annotation ops** — task workflows, review comments, block values
 
