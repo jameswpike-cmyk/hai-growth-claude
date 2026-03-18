@@ -6,7 +6,7 @@
 
 ## Standard Output Query
 
-**This is the reference SELECT + JOIN that produces the standard output columns defined in SKILL.md.** Use this as the base for every ops/fellow query. Add criteria-specific columns after column 17.
+**This is the reference SELECT + JOIN that produces the standard output columns defined in SKILL.md.** Use this as the base for every ops/fellow query. Add criteria-specific columns after column 18.
 
 ```sql
 WITH
@@ -51,6 +51,12 @@ on_hold AS (
   GROUP BY p.id
 ),
 
+kyc AS (
+  SELECT profile_id, persona_status
+  FROM `hs-ai-production.hai_dev.fact_fellow_kyc`
+  WHERE persona_status = 'verified'
+),
+
 survey_opt AS (
   SELECT profile_id, CAST(requires_opt_or_cpt_sponsorship AS STRING) AS opt
   FROM `hs-ai-production.hai_public.survey_responses`
@@ -62,7 +68,7 @@ survey_opt AS (
   ) = 1
 )
 
--- Standard output columns (1–17)
+-- Standard output columns (1–18)
 SELECT
   -- Core columns (1–10)
   dim.profile_id,                                                          -- 1
@@ -83,16 +89,19 @@ SELECT
   a.otter_ringfenced,                                                      -- 14
   CASE WHEN oh.profile_id IS NOT NULL THEN TRUE ELSE FALSE END AS on_hold, -- 15
   COALESCE(s.opt, 'false') AS opt_cpt,                                     -- 16
-  bfs.country_code                                                         -- 17
+  bfs.country_code,                                                        -- 17
+  CASE WHEN kyc.profile_id IS NOT NULL THEN TRUE ELSE FALSE END AS otter_kyc_verified  -- 18
 
   -- Add criteria confirmation columns here (e.g., major, resume_degree)
   -- Add custom columns here
+  -- For Otter eligibility queries, add: AND kyc.profile_id IS NOT NULL
 
 FROM `hs-ai-production.hai_dev.hai_profiles_dim` dim
 INNER JOIN base_fellow_status bfs ON dim.profile_id = CAST(bfs.profile_id AS STRING)
 INNER JOIN availability a ON dim.profile_id = CAST(a.profile_id AS STRING)
 LEFT JOIN on_hold oh ON CAST(oh.profile_id AS STRING) = dim.profile_id
 LEFT JOIN survey_opt s ON CAST(s.profile_id AS STRING) = dim.profile_id
+LEFT JOIN kyc ON CAST(kyc.profile_id AS STRING) = dim.profile_id
 
 WHERE a.available IN ('Available - Idle', 'Available - Project Paused')
   AND a.otter_ringfenced = FALSE
