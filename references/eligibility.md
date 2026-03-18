@@ -110,6 +110,7 @@ WHERE a.available IN ('Available - Idle', 'Available - Project Paused')
 |-----------|-------------|-------|
 | Verified & onboarded | `hai_public.profiles` | `status = 'verified'` AND `current_onboarding_stage = 'fully-onboarded'` |
 | Available (idle) | `hai_dev.fact_fellow_status` | No activity in 20+ days, OR offboarded, OR project paused |
+| Otter KYC verified | `hai_dev.fact_fellow_kyc` | `persona_status = 'verified'` (required for Otter eligibility — note: `hai_public.profiles.status = 'verified'` does NOT guarantee `persona_status = 'verified'`) |
 | Not Otter-ringfenced | `hai_dev.fact_fellow_status` | No Otter activity in last 30 days |
 | Not on hold | `hs-ai-sandbox.hai_dev.hai_on_hold` | Email not in on-hold sheet |
 | No OPT/CPT needed | `hai_public.survey_responses` | `requires_opt_or_cpt_sponsorship` is false or null |
