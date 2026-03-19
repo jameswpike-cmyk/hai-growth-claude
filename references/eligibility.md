@@ -2,6 +2,8 @@
 
 **MANDATORY: Any query about "eligible", "available", or "who can work on X" MUST apply this full filter.**
 
+**MANDATORY FOR OTTER: Any query about Otter eligibility MUST join `hai_dev.fact_fellow_kyc` and filter `WHERE persona_status = 'verified'`. A fellow can have `hai_public.profiles.status = 'verified'` without having `persona_status = 'verified'` due to a legacy silent KYC workflow — those users must NOT be considered Otter-eligible.**
+
 ---
 
 ## Standard Output Query
@@ -94,7 +96,6 @@ SELECT
 
   -- Add criteria confirmation columns here (e.g., major, resume_degree)
   -- Add custom columns here
-  -- For Otter eligibility queries, add: AND kyc.profile_id IS NOT NULL
 
 FROM `hs-ai-production.hai_dev.hai_profiles_dim` dim
 INNER JOIN base_fellow_status bfs ON dim.profile_id = CAST(bfs.profile_id AS STRING)
@@ -109,6 +110,11 @@ WHERE a.available IN ('Available - Idle', 'Available - Project Paused')
   AND (s.opt = 'false' OR s.opt IS NULL)
   AND (LOWER(bfs.country_code) LIKE '%us%' OR LOWER(bfs.country_code) LIKE '%united states%')
   AND NOT LOWER(bfs.email) LIKE '%@joinhandshake.com%'
+
+-- OTTER ELIGIBILITY: MUST add the following line when querying for Otter eligibility.
+-- hai_public.profiles.status = 'verified' is NOT sufficient — persona_status must also be 'verified'.
+-- Do NOT rely on otter_kyc_verified column alone; enforce this in the WHERE clause:
+--   AND kyc.profile_id IS NOT NULL
 ```
 
 ---
