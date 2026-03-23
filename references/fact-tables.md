@@ -873,3 +873,158 @@ INNER JOIN `handshake-production.hai_dev.fact_comments` c
 WHERE bv.project_id = @project_id
 ORDER BY bv.task_id, bv.label
 ```
+
+---
+
+## 9. lifecycle_communication_messages
+
+**Fully-qualified name:** `hs-ai-production.handshake_derived.lifecycle_communication_messages`
+**Grain:** One row per message per recipient (deduplicated across all events for the same message_id)
+**Updates:** Incremental every 2 hours (messages sent in last 30 days); full refresh weekly
+**Scale:** ~13 billion rows, data from June 2020 onward
+
+### Description
+
+Consolidated table of all email and push communication messages from Iterable, Mailgun, and Firebase. Each row represents a single message sent to a single recipient, with engagement metrics (delivered, opened, clicked) rolled up as boolean flags. **This is the canonical table for lifecycle comms, email communications, fellow invitations, and push notification analysis.**
+
+### Columns — Identifiers
+
+| Column | Type | Description |
+|--------|------|-------------|
+| message_id | STRING | Primary Key — unique per message + recipient combination |
+| email_address | STRING | Recipient email address |
+| user_id | INTEGER | Handshake user ID (extracted from payload or looked up by email) |
+| internal_message_id | INTEGER | Handshake app message ID |
+| push_notification_token_id | INTEGER | Firebase push token ID (push channel only) |
+
+### Columns — Source & Channel
+
+| Column | Type | Description |
+|--------|------|-------------|
+| channel | STRING | `email` or `push` |
+| event_source | STRING | `mailgun`, `iterable`, or `firebase` |
+| iterable_campaign_id | STRING | Iterable campaign ID (NOT same as Handshake campaign ID) |
+| iterable_campaign_name | STRING | Iterable campaign name (e.g. `monolith:job_posting:expiring_soon`) |
+| iterable_project_name | STRING | Iterable project: `Student`, `Employer`, `Edu`, or NULL (mailgun) |
+
+### Columns — Classification
+
+| Column | Type | Description |
+|--------|------|-------------|
+| product_bucket | STRING | Product area: `Career center`, `Jobs`, `Employer campaigns & bulk messages`, `Career fairs`, `Events`, `Account`, `1-1 Messages`, `Employer insights`, `Marketing`, `Onboarding Emails`, `HAI`, etc. |
+| marketing_bucket | STRING | Marketing subcategory (Iterable only): `Miscellaneous`, `Engagement Series`, `Activation Series`, `Welcome Series`, `Event Digest`, `HS Pre-Event Series` |
+| tag | STRING | Adhoc tags from monolith (e.g. `135-School`) |
+| transactional_data | STRING | JSON string with metadata (e.g. `{"handshake_mass_email_id":"599832"}`) |
+
+### Columns — Handshake Campaign Context
+
+| Column | Type | Description |
+|--------|------|-------------|
+| talent_engagement_campaign_id | INTEGER | Handshake app campaign ID |
+| talent_engagement_campaign_date_id | INTEGER | Handshake app campaign date ID |
+| premium_employer_id | INTEGER | Premium employer associated with message |
+| monolith_notification_id | INTEGER | App monolith notifications table ID |
+| nrs_notification_id | STRING | Notifications Relevance Service ID |
+| nds_notification_id | STRING | Notifications Data Service ID |
+
+### Columns — Engagement Metrics
+
+| Column | Type | Description |
+|--------|------|-------------|
+| sent_at | TIMESTAMP | When the message was sent |
+| delivered | BOOLEAN | Successfully delivered? |
+| delivered_at | TIMESTAMP | Delivery timestamp |
+| opened | BOOLEAN | User opened? (net of bot-like behavior) |
+| first_opened_at | TIMESTAMP | First open timestamp |
+| clicked | BOOLEAN | User clicked? (net of bot-like behavior) |
+| first_clicked_at | TIMESTAMP | First click timestamp |
+| clicked_notif_prefs_link | BOOLEAN | Clicked notification preferences link? |
+| unsubscribed | BOOLEAN | Iterable unsubscribe event fired? |
+| urls_clicked | REPEATED STRING | Array of URLs clicked |
+| job_ids | REPEATED INTEGER | Array of job IDs from notification payload |
+
+### Columns — Push Token Context
+
+| Column | Type | Description |
+|--------|------|-------------|
+| push_token_last_active_at | TIMESTAMP | Most recent push token activity before send |
+| push_token_authorized | BOOLEAN | Push notifications authorized on device? (newer field, incomplete coverage) |
+
+### Key Joins
+- `user_id` → Handshake user tables (no profile_id column — join through `fact_fellow_profile.handshake_user_id`)
+- `email_address` → `fact_fellow_profile.email` or Otter tables
+- `iterable_campaign_id` → Iterable campaign metadata
+
+### Important Notes
+- **No `profile_id` column.** Join to HAI fellows via `user_id → fact_fellow_profile.handshake_user_id` or `email_address → fact_fellow_profile.email`.
+- **Very large table (~13B rows).** Always filter by `sent_at` date range or `product_bucket`/`channel` to avoid expensive full scans.
+- **Channel distribution:** ~94% email (mailgun + iterable), ~6% push (firebase + iterable).
+- **`opened` and `clicked` are bot-filtered** — safe to use directly for engagement rates.
+- **`iterable_campaign_id` is NOT the same as a Handshake campaign ID.** Do not confuse with `talent_engagement_campaign_id`.
+
+### Common Patterns
+
+**Email Delivery & Engagement Rates by Product:**
+```sql
+SELECT
+  product_bucket,
+  COUNT(*) AS total_sent,
+  COUNTIF(delivered) AS total_delivered,
+  COUNTIF(opened) AS total_opened,
+  COUNTIF(clicked) AS total_clicked,
+  ROUND(COUNTIF(delivered) / COUNT(*) * 100, 2) AS delivery_rate_pct,
+  ROUND(COUNTIF(opened) / NULLIF(COUNTIF(delivered), 0) * 100, 2) AS open_rate_pct,
+  ROUND(COUNTIF(clicked) / NULLIF(COUNTIF(opened), 0) * 100, 2) AS click_to_open_rate_pct
+FROM `hs-ai-production.handshake_derived.lifecycle_communication_messages`
+WHERE channel = 'email'
+  AND sent_at >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 30 DAY)
+GROUP BY product_bucket
+ORDER BY total_sent DESC
+```
+
+**HAI-Specific Communications:**
+```sql
+SELECT
+  DATE(sent_at) AS send_date,
+  iterable_campaign_name,
+  COUNT(*) AS messages_sent,
+  COUNTIF(delivered) AS delivered,
+  COUNTIF(opened) AS opened,
+  COUNTIF(clicked) AS clicked
+FROM `hs-ai-production.handshake_derived.lifecycle_communication_messages`
+WHERE product_bucket = 'HAI'
+  AND sent_at >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 90 DAY)
+GROUP BY 1, 2
+ORDER BY send_date DESC
+```
+
+**Fellow Invitation / Onboarding Email Volume:**
+```sql
+SELECT
+  DATE_TRUNC(DATE(sent_at), WEEK) AS week,
+  COUNT(*) AS onboarding_emails_sent,
+  COUNTIF(opened) AS opened,
+  COUNTIF(clicked) AS clicked
+FROM `hs-ai-production.handshake_derived.lifecycle_communication_messages`
+WHERE product_bucket = 'Onboarding Emails'
+  AND channel = 'email'
+  AND sent_at >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 180 DAY)
+GROUP BY 1
+ORDER BY week DESC
+```
+
+**Join to HAI Fellow Profiles:**
+```sql
+SELECT
+  fp.full_name, fp.email, fp.profile_status,
+  COUNT(*) AS messages_received,
+  COUNTIF(lcm.opened) AS opened_count,
+  COUNTIF(lcm.clicked) AS clicked_count
+FROM `hs-ai-production.handshake_derived.lifecycle_communication_messages` lcm
+INNER JOIN `handshake-production.hai_dev.fact_fellow_profile` fp
+  ON lcm.user_id = fp.handshake_user_id
+WHERE lcm.sent_at >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 30 DAY)
+GROUP BY 1, 2, 3
+ORDER BY messages_received DESC
+LIMIT 20
+```

@@ -101,6 +101,10 @@ User asks about...
 │   → STOP. Read references/reddit-ads-tables.md NOW. Spend is in microcurrency (÷ 1,000,000).
 │   → Default table: campaign_report joined to campaign for names.
 │
+├─ lifecycle comms, email communications, push notifications, fellows invited/onboarding emails
+│   → Read references/fact-tables.md § "lifecycle_communication_messages". No profile_id — join via user_id or email.
+│   → **Very large table (~13B rows).** Always filter by sent_at date range.
+│
 ├─ Otter / Feather
 │   → STOP. Read references/otter-tables.md NOW. Different identity model (email, not profile_id).
 │   → Read references/query-patterns.md § "Otter Approval Rates" / § "Otter Campaign Health"
@@ -126,6 +130,7 @@ User asks about...
 | **Task lifecycle, comments, block values** | [references/query-patterns.md](references/query-patterns.md) § "Task Lifecycle Analysis", § "Comment / Quality Analysis", § "Block Values Analysis" |
 | **Otter/Feather campaigns** | [references/query-patterns.md](references/query-patterns.md) § "Otter Approval Rates", § "Otter Campaign Health" + [references/otter-tables.md](references/otter-tables.md) for schemas |
 | **Marketing funnel, cost metrics, attribution, cross-channel reporting** | [references/growth-marketing-logic.md](references/growth-marketing-logic.md) — canonical definitions for funnel stages, cost metrics (CPM/CPI/CPC/CPSU/CPFO), channel spend normalization, UTM attribution, Framer landing logic, and daily fact table construction. |
+| **Lifecycle comms, email comms, push notifications, fellows invited** | [references/fact-tables.md](references/fact-tables.md) § "lifecycle_communication_messages". No `profile_id` — join via `user_id` or `email_address`. **~13B rows — always filter by `sent_at`.** |
 | **Reddit ads (spend, targeting, conversions)** | [references/reddit-ads-tables.md](references/reddit-ads-tables.md) for schemas, joins, and query patterns. **Spend is microcurrency.** |
 | **Column names or types** | [references/fact-tables.md](references/fact-tables.md) or [references/dimension-tables.md](references/dimension-tables.md). If still unsure, run `bq show --format=prettyjson PROJECT:SCHEMA.TABLE`. |
 
