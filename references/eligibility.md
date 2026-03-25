@@ -2,7 +2,15 @@
 
 **MANDATORY: Any query about "eligible", "available", or "who can work on X" MUST apply this full filter.**
 
-**MANDATORY FOR OTTER: Any query about Otter eligibility MUST join `hai_dev.fact_fellow_kyc` and filter `WHERE persona_status = 'verified'`. A fellow can have `hai_public.profiles.status = 'verified'` without having `persona_status = 'verified'` due to a legacy silent KYC workflow — those users must NOT be considered Otter-eligible.**
+**MANDATORY FOR OTTER: Any query about Otter eligibility MUST join `hai_dev.hai_kyc_fact` and filter `WHERE kyc_completed IS TRUE OR blocking_kyc_completed IS TRUE`. A fellow can have `hai_public.profiles.status = 'verified'` without having completed KYC due to a legacy silent KYC workflow — those users must NOT be considered Otter-eligible.**
+
+**KYC Types (4 total):**
+- **Persona KYC** — standard KYC flow all users go through during GO
+- **Silent Persona KYC** — deprecated expedited flow; many old users onboarded via this (why `profiles.status = 'verified'` alone is insufficient)
+- **Blocking KYC** — re-do KYC forced by operators/T&S; rolls back fellow status until they complete a Persona modal on their dashboard
+- **Periodic KYC** — project-specific, configured in PSO; expires every 3 months; once completed for one project, carries over until expiry
+
+`hai_dev.hai_kyc_fact` contains data for all 4 types, including completion (boolean), completed timestamps, and status (approved, needs-review, rejected, etc.).
 
 ---
 
@@ -54,9 +62,9 @@ on_hold AS (
 ),
 
 kyc AS (
-  SELECT profile_id, persona_status
-  FROM `hs-ai-production.hai_dev.fact_fellow_kyc`
-  WHERE persona_status = 'verified'
+  SELECT profile_id
+  FROM `hs-ai-production.hai_dev.hai_kyc_fact`
+  WHERE kyc_completed IS TRUE OR blocking_kyc_completed IS TRUE
 ),
 
 survey_opt AS (
@@ -112,7 +120,7 @@ WHERE a.available IN ('Available - Idle', 'Available - Project Paused')
   AND NOT LOWER(bfs.email) LIKE '%@joinhandshake.com%'
 
 -- OTTER ELIGIBILITY: MUST add the following line when querying for Otter eligibility.
--- hai_public.profiles.status = 'verified' is NOT sufficient — persona_status must also be 'verified'.
+-- hai_public.profiles.status = 'verified' is NOT sufficient — kyc_completed or blocking_kyc_completed must also be TRUE.
 -- Do NOT rely on otter_kyc_verified column alone; enforce this in the WHERE clause:
 --   AND kyc.profile_id IS NOT NULL
 ```
@@ -125,7 +133,7 @@ WHERE a.available IN ('Available - Idle', 'Available - Project Paused')
 |-----------|-------------|-------|
 | Verified & onboarded | `hai_public.profiles` | `status = 'verified'` AND `current_onboarding_stage = 'fully-onboarded'` |
 | Available (idle) | `hai_dev.fact_fellow_status` | No activity in 20+ days, OR offboarded, OR project paused |
-| Otter KYC verified | `hai_dev.fact_fellow_kyc` | `persona_status = 'verified'` (required for Otter eligibility — note: `hai_public.profiles.status = 'verified'` does NOT guarantee `persona_status = 'verified'`) |
+| Otter KYC verified | `hai_dev.hai_kyc_fact` | `kyc_completed IS TRUE OR blocking_kyc_completed IS TRUE` (required for Otter eligibility — note: `profiles.status = 'verified'` alone is insufficient due to legacy silent KYC) |
 | Not Otter-ringfenced | `hai_dev.fact_fellow_status` | No Otter activity in last 30 days |
 | Not on hold | `hs-ai-sandbox.hai_dev.hai_on_hold` | Email not in on-hold sheet |
 | No OPT/CPT needed | `hai_public.survey_responses` | `requires_opt_or_cpt_sponsorship` is false or null |

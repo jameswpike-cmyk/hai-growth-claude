@@ -8,8 +8,8 @@ description: >
   Meta ads, Facebook ads, Google Ads, LinkedIn ads, Indeed, ZipRecruiter,
   UTM, referrals, resume search, parsed resume, hai_dev, hai_public,
   fact_fellow_perf, fact_tasks, hai_profiles_dim, or any query about
-  Reddit ads, reddit_ads, ad spend, CPA, campaign, LinkedIn Ads,
-  CpApplication, CpActivated,
+  Reddit ads, reddit_ads, ad spend, paid marketing, CPA, campaign, LinkedIn Ads,
+  CpApplication, CpActivated, fact_paid_marketing,
   HAI fellow, marketing, or ops data. When in doubt, trigger this skill.
 allowed_commands:
   - gcloud
@@ -93,6 +93,10 @@ User asks about...
 │   → Read references/query-patterns.md § "Funnel Analysis & Drop-Off"
 │   → Table: fact_project_funnel
 │
+├─ paid marketing spend, impressions, clicks, CTR, CPM, cross-channel spend
+│   → STOP. Read references/fact-paid-marketing.md NOW. Unified table across LinkedIn, Meta, Reddit, Google.
+│   → Use `fact_paid_marketing` for spend/impressions/clicks queries. No microcurrency conversion needed.
+│
 ├─ ad campaign performance (Meta, Google, LinkedIn, Reddit, Indeed, ZipRecruiter)
 │   → STOP. Read references/growth-marketing-logic.md NOW for canonical metric definitions.
 │   → See Team Workflows § "Marketing: Ad campaign performance" below for table pointers.
@@ -129,6 +133,7 @@ User asks about...
 | **Reviewer performance (R1/R2)** | [references/query-patterns.md](references/query-patterns.md) § "Reviewer Performance (R1/R2)" |
 | **Task lifecycle, comments, block values** | [references/query-patterns.md](references/query-patterns.md) § "Task Lifecycle Analysis", § "Comment / Quality Analysis", § "Block Values Analysis" |
 | **Otter/Feather campaigns** | [references/query-patterns.md](references/query-patterns.md) § "Otter Approval Rates", § "Otter Campaign Health" + [references/otter-tables.md](references/otter-tables.md) for schemas |
+| **Paid marketing spend, impressions, clicks (cross-channel)** | [references/fact-paid-marketing.md](references/fact-paid-marketing.md) — unified daily ad-level table across LinkedIn, Meta, Reddit, Google. Spend already in USD. Use for spend/impressions/clicks/CTR/CPM queries. |
 | **Marketing funnel, cost metrics, attribution, cross-channel reporting** | [references/growth-marketing-logic.md](references/growth-marketing-logic.md) — canonical definitions for funnel stages, cost metrics (CPM/CPI/CPC/CPSU/CPFO), channel spend normalization, UTM attribution, Framer landing logic, and daily fact table construction. |
 | **Lifecycle comms, email comms, push notifications, fellows invited** | [references/fact-tables.md](references/fact-tables.md) § "lifecycle_communication_messages". No `profile_id` — join via `user_id` or `email_address`. **~13B rows — always filter by `sent_at`.** |
 | **Reddit ads (spend, targeting, conversions)** | [references/reddit-ads-tables.md](references/reddit-ads-tables.md) for schemas, joins, and query patterns. **Spend is microcurrency.** |
@@ -266,6 +271,10 @@ See `references/eligibility.md` § "Education & Background Queries (Dual-Source 
 
 ### Ops: Onboarding funnel
 - **Project funnel** → `fact_project_funnel` (PSO → Canvas → Contract → First Claim → First Submit → First Approval)
+
+### Marketing: Paid marketing (cross-channel spend/impressions/clicks)
+- **Unified table** → `hs-ai-production.hai_dev.fact_paid_marketing` — daily ad-level data across LinkedIn, Meta, Reddit, Google. Spend already in USD. Use this for cross-channel comparisons, total spend, CTR, CPM.
+- See [references/fact-paid-marketing.md](references/fact-paid-marketing.md) for schema, grain, channel notes, and common queries.
 
 ### Marketing: Ad campaign performance
 **Default to campaign-level reports unless the user asks for ad or keyword detail.**
@@ -440,5 +449,6 @@ Report the row count to the user (subtract 4 for the metadata header lines + CSV
 | [references/otter-tables.md](references/otter-tables.md) | Column schemas for 5 Otter/Feather tables | You need Otter table schemas |
 | [references/dimension-tables.md](references/dimension-tables.md) | Schemas for hai_profiles_dim, hai_user_growth_dim, and hai_public tables (resumes, profiles) | You need profile dimensions or resume data |
 | [references/reddit-ads-tables.md](references/reddit-ads-tables.md) | Column schemas for 24 Reddit Ads tables (Fivetran sync) | You need Reddit ad performance, conversions, or targeting data |
+| [references/fact-paid-marketing.md](references/fact-paid-marketing.md) | Unified daily ad-level spend/impressions/clicks across LinkedIn, Meta, Reddit, Google | Paid marketing spend, cross-channel spend comparison, CTR, CPM |
 | [references/growth-marketing-logic.md](references/growth-marketing-logic.md) | Marketing funnel definitions, attribution model, channel spend normalization, cost metrics, Framer landing logic | Any cross-channel marketing question, cost metrics, attribution, or funnel analysis |
 | [references/query-patterns.md](references/query-patterns.md) | Real SQL examples by use case (HAI + Otter) | You're writing a query and want proven patterns |
