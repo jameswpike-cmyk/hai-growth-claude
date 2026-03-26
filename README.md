@@ -5,10 +5,10 @@ BigQuery semantic data layer for the Handshake AI Growth team. This is a [Claude
 ## What It Does
 
 Provides Claude with context to query and analyze:
-- **Fellow performance** — approval rates, TIC, AHT, reviewer metrics (R1/R2)
-- **Project funnels** — onboarding, pipeline state, project lifecycle
-- **Marketing & campaigns** — Meta/Google/LinkedIn/Reddit ads, UTM tracking, CPA
 - **Fellow profiles** — eligibility, resume data, fellow search/matching
+- **Project funnels** — onboarding, engagement scoring, pipeline state, project lifecycle
+- **Marketing & campaigns** — Meta/Google/LinkedIn/Reddit ads, UTM tracking, CPA, lifecycle comms
+- **Fellow performance** — approval rates, TIC, AHT, reviewer metrics (R1/R2)
 - **Annotation ops** — task workflows, review comments, block values
 
 ## Setup
@@ -78,13 +78,16 @@ Examples:
 │   └── plugin.json          # Plugin metadata
 ├── SKILL.md                 # Main skill instructions & prerequisites
 ├── references/
-│   ├── dimension-tables.md  # Dimension table schemas
-│   ├── eligibility.md       # Fellow eligibility logic
-│   ├── fact-tables.md       # Fact table schemas
-│   ├── growth-marketing-logic.md  # Marketing metric definitions
-│   ├── otter-tables.md      # Otter/Feather campaign tables
-│   ├── query-patterns.md    # Common query patterns & examples
-│   └── reddit-ads-tables.md # Reddit ads schema
+│   ├── dimension-tables.md       # Dimension table schemas
+│   ├── eligibility.md            # Fellow eligibility logic
+│   ├── engagement-score.md       # Fellow engagement tier definitions & queries
+│   ├── fact-paid-marketing.md    # Unified cross-channel ad spend table
+│   ├── fact-tables.md            # Fact table schemas
+│   ├── growth-marketing-logic.md # Marketing metric definitions
+│   ├── lifecycle-comms.md        # Lifecycle email/push communications (~13B rows)
+│   ├── otter-tables.md           # Otter/Feather campaign tables
+│   ├── query-patterns.md         # Common query patterns & examples
+│   └── reddit-ads-tables.md      # Reddit ads schema
 └── README.md
 ```
 
