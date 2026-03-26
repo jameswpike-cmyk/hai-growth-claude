@@ -10,7 +10,11 @@ description: >
   fact_fellow_perf, fact_tasks, hai_profiles_dim, or any query about
   Reddit ads, reddit_ads, ad spend, paid marketing, CPA, campaign, LinkedIn Ads,
   CpApplication, CpActivated, fact_paid_marketing,
-  HAI fellow, marketing, or ops data. When in doubt, trigger this skill.
+  engagement, engagement score, engagement bucket, fellow engagement,
+  HAI fellow, marketing, or ops data, lifecycle comms, lifecycle communications,
+  email communications, push notifications, lifecycle_communication_messages,
+  email engagement, open rate, click rate, delivery rate, iterable,
+  mailgun, product_bucket. When in doubt, trigger this skill.
 allowed_commands:
   - gcloud
   - gcloud auth login --enable-gdrive-access
@@ -105,8 +109,12 @@ User asks about...
 │   → STOP. Read references/reddit-ads-tables.md NOW. Spend is in microcurrency (÷ 1,000,000).
 │   → Default table: campaign_report joined to campaign for names.
 │
+├─ engagement, engagement score, engagement bucket
+│   → STOP. Read references/engagement-score.md NOW.
+│   → Classifies fellows into no/low/medium/high engagement tiers from fact_project_funnel.
+│
 ├─ lifecycle comms, email communications, push notifications, fellows invited/onboarding emails
-│   → Read references/fact-tables.md § "lifecycle_communication_messages". No profile_id — join via user_id or email.
+│   → STOP. Read references/lifecycle-comms.md NOW. No profile_id — join via user_id or email.
 │   → **Very large table (~13B rows).** Always filter by sent_at date range.
 │
 ├─ Otter / Feather
@@ -135,7 +143,8 @@ User asks about...
 | **Otter/Feather campaigns** | [references/query-patterns.md](references/query-patterns.md) § "Otter Approval Rates", § "Otter Campaign Health" + [references/otter-tables.md](references/otter-tables.md) for schemas |
 | **Paid marketing spend, impressions, clicks (cross-channel)** | [references/fact-paid-marketing.md](references/fact-paid-marketing.md) — unified daily ad-level table across LinkedIn, Meta, Reddit, Google. Spend already in USD. Use for spend/impressions/clicks/CTR/CPM queries. |
 | **Marketing funnel, cost metrics, attribution, cross-channel reporting** | [references/growth-marketing-logic.md](references/growth-marketing-logic.md) — canonical definitions for funnel stages, cost metrics (CPM/CPI/CPC/CPSU/CPFO), channel spend normalization, UTM attribution, Framer landing logic, and daily fact table construction. |
-| **Lifecycle comms, email comms, push notifications, fellows invited** | [references/fact-tables.md](references/fact-tables.md) § "lifecycle_communication_messages". No `profile_id` — join via `user_id` or `email_address`. **~13B rows — always filter by `sent_at`.** |
+| **Fellow engagement score / engagement tiers** | [references/engagement-score.md](references/engagement-score.md) — classifies fellows into no/low/medium/high engagement from `fact_project_funnel` email open + funnel milestones. |
+| **Lifecycle comms, email comms, push notifications, fellows invited** | [references/lifecycle-comms.md](references/lifecycle-comms.md) — standalone reference. No `profile_id` — join via `user_id` or `email_address`. **~13B rows — always filter by `sent_at`.** |
 | **Reddit ads (spend, targeting, conversions)** | [references/reddit-ads-tables.md](references/reddit-ads-tables.md) for schemas, joins, and query patterns. **Spend is microcurrency.** |
 | **Column names or types** | [references/fact-tables.md](references/fact-tables.md) or [references/dimension-tables.md](references/dimension-tables.md). If still unsure, run `bq show --format=prettyjson PROJECT:SCHEMA.TABLE`. |
 
@@ -451,4 +460,5 @@ Report the row count to the user (subtract 4 for the metadata header lines + CSV
 | [references/reddit-ads-tables.md](references/reddit-ads-tables.md) | Column schemas for 24 Reddit Ads tables (Fivetran sync) | You need Reddit ad performance, conversions, or targeting data |
 | [references/fact-paid-marketing.md](references/fact-paid-marketing.md) | Unified daily ad-level spend/impressions/clicks across LinkedIn, Meta, Reddit, Google | Paid marketing spend, cross-channel spend comparison, CTR, CPM |
 | [references/growth-marketing-logic.md](references/growth-marketing-logic.md) | Marketing funnel definitions, attribution model, channel spend normalization, cost metrics, Framer landing logic | Any cross-channel marketing question, cost metrics, attribution, or funnel analysis |
+| [references/lifecycle-comms.md](references/lifecycle-comms.md) | Schema, efficiency rules, and query patterns for `lifecycle_communication_messages` (~13B rows) | Lifecycle comms, email/push engagement, onboarding emails, HAI communications |
 | [references/query-patterns.md](references/query-patterns.md) | Real SQL examples by use case (HAI + Otter) | You're writing a query and want proven patterns |
