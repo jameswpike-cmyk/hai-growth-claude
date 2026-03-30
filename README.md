@@ -9,7 +9,6 @@ Provides Claude with context to query and analyze:
 - **Project funnels** — onboarding, engagement scoring, pipeline state, project lifecycle
 - **Marketing & campaigns** — Meta/Google/LinkedIn/Reddit ads, UTM tracking, CPA, lifecycle comms
 - **Fellow performance** — approval rates, TIC, AHT, reviewer metrics (R1/R2)
-- **Annotation ops** — task workflows, review comments, block values
 
 ## Setup
 

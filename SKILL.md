@@ -4,7 +4,7 @@ description: >
   TRIGGER this skill when the user mentions ANY of: BigQuery, BQ, bq query,
   fellows, fellow search, fellow matching, eligibility, eligible, available fellows,
   approval rate, TIC, AHT, reviewer performance, R1, R2, onboarding funnel,
-  project funnel, BPO, annotation, Otter, Feather, campaign performance,
+  project funnel, BPO, Otter, Feather, campaign performance,
   Meta ads, Facebook ads, Google Ads, LinkedIn ads, Indeed, ZipRecruiter,
   UTM, referrals, resume search, parsed resume, hai_dev, hai_public,
   fact_fellow_perf, fact_tasks, hai_profiles_dim, fact_hai_attribution,
