@@ -105,8 +105,8 @@ GROUP BY pipeline_stage_name, task_id
 | pso_allocated_pst | TIMESTAMP | When allocated to PSO |
 | pso_completed_pst | TIMESTAMP | When PSO completed |
 | pso_allocated_week | DATE | Week of PSO allocation (Monday start) |
-| canvas_enrolled_at | TIMESTAMP | Assessment enrollment timestamp |
-| canvas_finished_at | TIMESTAMP | Assessment completion timestamp |
+| canvas_enrolled_at | TIMESTAMP | Assessment enrollment timestamp (⚠️ no _pst suffix) |
+| canvas_finished_at_pst | TIMESTAMP | Assessment completion timestamp |
 | contract_finished_at_pst | TIMESTAMP | Contract signing completion |
 | first_claimed_at_pst | TIMESTAMP | First task claim |
 | first_task_submitted_pst | TIMESTAMP | First task submission |
@@ -129,7 +129,7 @@ GROUP BY pipeline_stage_name, task_id
 ```sql
 SELECT
   COUNT(DISTINCT profile_id) AS allocated,
-  COUNT(DISTINCT CASE WHEN canvas_finished_at IS NOT NULL THEN profile_id END) AS assessment_completed,
+  COUNT(DISTINCT CASE WHEN canvas_finished_at_pst IS NOT NULL THEN profile_id END) AS assessment_completed,
   COUNT(DISTINCT CASE WHEN first_claimed_at_pst IS NOT NULL THEN profile_id END) AS claimed_task,
   COUNT(DISTINCT CASE WHEN first_task_approved_pst IS NOT NULL THEN profile_id END) AS approved_task
 FROM `hs-ai-production.hai_dev.fact_project_funnel`
@@ -152,8 +152,8 @@ GROUP BY 1
 ```sql
 SELECT 'PSO → Assessment' AS stage,
   COUNT(*) AS started,
-  COUNT(canvas_enrolled_at) AS completed,
-  ROUND(COUNT(canvas_enrolled_at) * 100.0 / COUNT(*), 1) AS completion_pct
+  COUNT(canvas_finished_at_pst) AS completed,
+  ROUND(COUNT(canvas_finished_at_pst) * 100.0 / COUNT(*), 1) AS completion_pct
 FROM `hs-ai-production.hai_dev.fact_project_funnel`
 WHERE pso_allocated_pst IS NOT NULL
 UNION ALL
@@ -161,7 +161,7 @@ SELECT 'Assessment → First Claim',
   COUNT(*), COUNT(first_claimed_at_pst),
   ROUND(COUNT(first_claimed_at_pst) * 100.0 / COUNT(*), 1)
 FROM `hs-ai-production.hai_dev.fact_project_funnel`
-WHERE canvas_finished_at IS NOT NULL
+WHERE canvas_finished_at_pst IS NOT NULL
 ```
 
 ---

@@ -91,7 +91,7 @@ SELECT
   project_name,
   COUNT(DISTINCT profile_id) AS allocated,
   COUNT(DISTINCT CASE WHEN pso_completed_pst IS NOT NULL THEN profile_id END) AS pso_completed,
-  COUNT(DISTINCT CASE WHEN canvas_finished_at IS NOT NULL THEN profile_id END) AS assessment_completed,
+  COUNT(DISTINCT CASE WHEN canvas_finished_at_pst IS NOT NULL THEN profile_id END) AS assessment_completed,
   COUNT(DISTINCT CASE WHEN contract_finished_at_pst IS NOT NULL THEN profile_id END) AS contract_signed,
   COUNT(DISTINCT CASE WHEN first_claimed_at_pst IS NOT NULL THEN profile_id END) AS first_claim,
   COUNT(DISTINCT CASE WHEN first_task_submitted_pst IS NOT NULL THEN profile_id END) AS first_submit,
@@ -101,7 +101,7 @@ SELECT
   ROUND(100 - COUNT(DISTINCT CASE WHEN pso_completed_pst IS NOT NULL THEN profile_id END) * 100.0 /
     NULLIF(COUNT(DISTINCT profile_id), 0), 1) AS pso_dropoff_pct,
   ROUND(100 - COUNT(DISTINCT CASE WHEN first_claimed_at_pst IS NOT NULL THEN profile_id END) * 100.0 /
-    NULLIF(COUNT(DISTINCT CASE WHEN canvas_finished_at IS NOT NULL THEN profile_id END), 0), 1) AS assessment_to_claim_dropoff_pct
+    NULLIF(COUNT(DISTINCT CASE WHEN canvas_finished_at_pst IS NOT NULL THEN profile_id END), 0), 1) AS assessment_to_claim_dropoff_pct
 
 FROM `hs-ai-production.hai_dev.fact_project_funnel`
 GROUP BY project_name
