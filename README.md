@@ -99,12 +99,12 @@ Examples:
 │   └── plugin.json          # Plugin metadata
 ├── SKILL.md                 # Main skill instructions & prerequisites
 ├── references/
-│   ├── dimension-tables.md       # Dimension table schemas
-│   ├── eligibility.md            # Fellow eligibility logic
-│   ├── engagement-score.md       # Fellow engagement tier definitions & queries
-│   ├── fact-paid-marketing.md    # Unified cross-channel ad spend table
-│   ├── fact-tables.md            # Fact table schemas
-│   ├── growth-marketing-logic.md # Marketing metric definitions
+│   ├── dimension-tables.md                       # Dimension table schemas
+│   ├── eligibility.md                            # Fellow eligibility logic
+│   ├── engagement-score.md                       # Fellow engagement tier definitions & queries
+│   ├── fact-hai-attribution.md                   # Best attribution table — enriched UTM, Indeed backfill, funnel/cost metrics
+│   ├── fact-paid-marketing.md                    # Cross-channel ad spend (LinkedIn/Meta/Reddit/Google + Indeed)
+│   ├── fact-tables.md                            # Fact table schemas
 │   ├── lifecycle-comms.md                        # Lifecycle email/push communications (~13B rows)
 │   ├── onboarding-funnel-drip-campaign-setup.md  # BQ + Fivetran funnel flag queries for Census/Iterable
 │   ├── otter-tables.md                           # Otter/Feather campaign tables

@@ -7,7 +7,9 @@ description: >
   project funnel, BPO, annotation, Otter, Feather, campaign performance,
   Meta ads, Facebook ads, Google Ads, LinkedIn ads, Indeed, ZipRecruiter,
   UTM, referrals, resume search, parsed resume, hai_dev, hai_public,
-  fact_fellow_perf, fact_tasks, hai_profiles_dim, or any query about
+  fact_fellow_perf, fact_tasks, hai_profiles_dim, fact_hai_attribution,
+  attribution, sign-ups by channel, cost per sign-up, Indeed spend,
+  diamond_growth_indeed, or any query about
   Reddit ads, reddit_ads, ad spend, paid marketing, CPA, campaign, LinkedIn Ads,
   CpApplication, CpActivated, fact_paid_marketing,
   engagement, engagement score, engagement bucket, fellow engagement,
@@ -117,8 +119,10 @@ User asks about...
 │   → Use `fact_paid_marketing` for spend/impressions/clicks queries. No microcurrency conversion needed.
 │
 ├─ ad campaign performance (Meta, Google, LinkedIn, Reddit, Indeed, ZipRecruiter)
-│   → STOP. Read references/growth-marketing-logic.md NOW for canonical metric definitions.
 │   → See Team Workflows § "Marketing: Ad campaign performance" below for table pointers.
+│
+├─ attribution, UTM, sign-ups by channel, cost per sign-up, funnel conversion by campaign
+│   → STOP. Read references/fact-hai-attribution.md NOW. Best attribution table — enriched campaign/ad names, Indeed backfill.
 │
 ├─ Reddit ads (spend, impressions, subreddit targeting, conversions)
 │   → STOP. Read references/reddit-ads-tables.md NOW. Spend is in microcurrency (÷ 1,000,000).
@@ -157,8 +161,8 @@ User asks about...
 | **Reviewer performance (R1/R2)** | [references/query-patterns.md](references/query-patterns.md) § "Reviewer Performance (R1/R2)" |
 | **Task lifecycle, comments, block values** | [references/query-patterns.md](references/query-patterns.md) § "Task Lifecycle Analysis", § "Comment / Quality Analysis", § "Block Values Analysis" |
 | **Otter/Feather campaigns** | [references/query-patterns.md](references/query-patterns.md) § "Otter Approval Rates", § "Otter Campaign Health" + [references/otter-tables.md](references/otter-tables.md) for schemas |
-| **Paid marketing spend, impressions, clicks (cross-channel)** | [references/fact-paid-marketing.md](references/fact-paid-marketing.md) — unified daily ad-level table across LinkedIn, Meta, Reddit, Google. Spend already in USD. Use for spend/impressions/clicks/CTR/CPM queries. |
-| **Marketing funnel, cost metrics, attribution, cross-channel reporting** | [references/growth-marketing-logic.md](references/growth-marketing-logic.md) — canonical definitions for funnel stages, cost metrics (CPM/CPI/CPC/CPSU/CPFO), channel spend normalization, UTM attribution, Framer landing logic, and daily fact table construction. |
+| **Paid marketing spend, impressions, clicks (cross-channel, including Indeed)** | [references/fact-paid-marketing.md](references/fact-paid-marketing.md) — `fact_paid_marketing` (LinkedIn, Meta, Reddit, Google) + `diamond_growth_indeed` (Indeed). Spend in USD. UNION ALL pattern included. |
+| **Attribution, UTM source, sign-ups by campaign, cost per sign-up/FO/allocated** | [references/fact-hai-attribution.md](references/fact-hai-attribution.md) — best attribution table. Enriched campaign/ad/adset names, Indeed backfill, funnel stage definitions, cost metric formulas. |
 | **Fellow engagement score / engagement tiers** | [references/engagement-score.md](references/engagement-score.md) — classifies fellows into no/low/medium/high engagement from `fact_project_funnel` email open + funnel milestones. |
 | **Lifecycle comms, email comms, push notifications, fellows invited** | [references/lifecycle-comms.md](references/lifecycle-comms.md) — standalone reference. No `profile_id` — join via `user_id` or `email_address`. **~13B rows — always filter by `sent_at`.** |
 | **Reddit ads (spend, targeting, conversions)** | [references/reddit-ads-tables.md](references/reddit-ads-tables.md) for schemas, joins, and query patterns. **Spend is microcurrency.** |
@@ -474,8 +478,8 @@ Report the row count to the user (subtract 4 for the metadata header lines + CSV
 | [references/otter-tables.md](references/otter-tables.md) | Column schemas for 5 Otter/Feather tables | You need Otter table schemas |
 | [references/dimension-tables.md](references/dimension-tables.md) | Schemas for hai_profiles_dim, hai_user_growth_dim, and hai_public tables (resumes, profiles) | You need profile dimensions or resume data |
 | [references/reddit-ads-tables.md](references/reddit-ads-tables.md) | Column schemas for 24 Reddit Ads tables (Fivetran sync) | You need Reddit ad performance, conversions, or targeting data |
-| [references/fact-paid-marketing.md](references/fact-paid-marketing.md) | Unified daily ad-level spend/impressions/clicks across LinkedIn, Meta, Reddit, Google | Paid marketing spend, cross-channel spend comparison, CTR, CPM |
-| [references/growth-marketing-logic.md](references/growth-marketing-logic.md) | Marketing funnel definitions, attribution model, channel spend normalization, cost metrics, Framer landing logic | Any cross-channel marketing question, cost metrics, attribution, or funnel analysis |
+| [references/fact-paid-marketing.md](references/fact-paid-marketing.md) | Unified daily ad-level spend/impressions/clicks across LinkedIn, Meta, Reddit, Google + Indeed (`diamond_growth_indeed`) | Paid marketing spend, cross-channel spend comparison, CTR, CPM, Indeed job spend |
+| [references/fact-hai-attribution.md](references/fact-hai-attribution.md) | Best attribution table — enriched UTM/campaign/ad/adset names, Indeed backfill, funnel stage definitions, cost metric formulas | Attribution, sign-ups by channel/campaign, cost per sign-up/FO/allocated/activated |
 | [references/lifecycle-comms.md](references/lifecycle-comms.md) | Schema, efficiency rules, and query patterns for `lifecycle_communication_messages` (~13B rows) | Lifecycle comms, email/push engagement, onboarding emails, HAI communications |
 | [references/query-patterns.md](references/query-patterns.md) | Real SQL examples by use case (HAI + Otter) | You're writing a query and want proven patterns |
 | [references/onboarding-funnel-drip-campaign-setup.md](references/onboarding-funnel-drip-campaign-setup.md) | BQ analysis + Fivetran sync query templates for HAI and Otter onboarding funnel flags | User asks for funnel flags, Census sync query, Iterable drip segments, or screener step flags |
