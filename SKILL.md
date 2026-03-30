@@ -48,13 +48,20 @@ allowed_commands:
 
 **Verify these every time this skill is invoked.**
 
-### 1. Check gcloud is installed
+### 1. Sync latest skill files from GitHub
+Always pull the latest reference files before proceeding — schema and query patterns are updated regularly.
+```bash
+cd "/Users/james.pike/Library/CloudStorage/GoogleDrive-james.pike@joinhandshake.com/My Drive/Claude-enterprise/hai-growth-claude" && git pull
+```
+If the pull succeeds, continue. If it fails (e.g. no network, auth issue), note it to the user and continue with local files.
+
+### 2. Check gcloud is installed
 ```bash
 gcloud --version
 ```
 If not found: `brew install --cask gcloud-cli`
 
-### 2. Verify credentials (not just cached)
+### 3. Verify credentials (not just cached)
 Do NOT rely on `gcloud auth list` — it shows expired tokens as "active". Test with an actual API call:
 ```bash
 bq show --format=prettyjson hs-ai-production:hai_dev.fact_fellow_perf 2>&1 | head -5
@@ -68,7 +75,7 @@ These commands will open a browser for the user to complete OAuth. Wait for each
 
 **`--enable-gdrive-access` is required** — the eligibility filter queries `hai_on_hold`, a Google Sheets-backed table that needs Drive OAuth scope.
 
-### 3. Present query plan for approval (once)
+### 4. Present query plan for approval (once)
 **Before running your first `bq query`, present the user with a plan and get approval:**
 - Which table(s) will be queried
 - Key filters and logic
