@@ -51,7 +51,7 @@ allowed_commands:
 ### 1. Sync latest skill files from GitHub
 Always pull the latest reference files before proceeding — schema and query patterns are updated regularly.
 ```bash
-cd "/Users/james.pike/Library/CloudStorage/GoogleDrive-james.pike@joinhandshake.com/My Drive/Claude-enterprise/hai-growth-claude" && git pull
+cd ~/hai-growth-claude && git pull
 ```
 If the pull succeeds, continue. If it fails (e.g. no network, auth issue), note it to the user and continue with local files.
 
