@@ -26,9 +26,8 @@ When the user asks for funnel flag queries, ask:
 | Column | Source | Notes |
 |--------|--------|-------|
 | `profile_id` | `fact_project_funnel` | UUID string |
-| `full_name` | `fact_fellow_profile` | |
-| `email` | `fact_project_funnel` (prefer), fallback `fact_fellow_profile` | Real email — prefer `p.email` over Otter-side email |
-| `profile_status` | `fact_project_funnel` (`profile_status`) or `hai_profiles_dim` (`status`) | `verified`, `pending`, etc. |
+| `email` | `fact_project_funnel` | Real email — for Otter projects prefer `fpf.email` over Otter-side anonymised email |
+| `profile_status` | `fact_project_funnel` (`profile_status`) | `verified`, `pending`, etc. |
 | `current_onboarding_stage` | `hai_profiles_dim` | `fully-onboarded`, etc. |
 | `project_name` | `fact_project_funnel` | |
 | `last_touch_utm_source` | `hai_user_growth_dim` | HAI projects only — omit for Otter-only output |
@@ -58,8 +57,7 @@ When the user asks for funnel flag queries, ask:
 ### Joins
 
 ```
-fact_project_funnel           — base, filter by project_id
-  LEFT JOIN fact_fellow_profile     ON profile_id = profile_id     — full_name, email
+fact_project_funnel           — base, filter by project_id (email, profile_status, project_name already here)
   LEFT JOIN hai_profiles_dim        ON profile_id = profile_id     — current_onboarding_stage
   LEFT JOIN hai_user_growth_dim     ON profile_id = user_id        — last_touch_utm_source
   LEFT JOIN assessments CTE         ON profile_id = profile_id     — assessment flags (optional)
@@ -92,7 +90,6 @@ WITH assessments AS (
 )
 SELECT DISTINCT
     f.profile_id,
-    p.full_name,
     f.email,
     f.profile_status,
     dim.current_onboarding_stage,
@@ -117,8 +114,6 @@ SELECT DISTINCT
     f.first_task_submitted_pst
 
 FROM `hs-ai-production.hai_dev.fact_project_funnel` f
-LEFT JOIN `hs-ai-production.hai_dev.fact_fellow_profile` p
-  ON f.profile_id = p.profile_id
 LEFT JOIN `hs-ai-production.hai_dev.hai_profiles_dim` dim
   ON f.profile_id = dim.profile_id
 LEFT JOIN `hs-ai-production.hai_dev.hai_user_growth_dim` ug
@@ -156,7 +151,6 @@ WITH assessments AS (
 )
 SELECT DISTINCT
     f.profile_id,
-    p.full_name,
     f.email,
     f.profile_status,
     dim.current_onboarding_stage,
@@ -174,8 +168,6 @@ SELECT DISTINCT
     f.first_task_submitted_pst IS NOT NULL              AS hai_[slug]_first_task_submitted_flag
 
 FROM `handshake-production.hai_dev.fact_project_funnel` f
-LEFT JOIN `handshake-production.hai_dev.fact_fellow_profile` p
-  ON f.profile_id = p.profile_id
 LEFT JOIN `handshake-production.hai_dev.hai_profiles_dim` dim
   ON f.profile_id = dim.profile_id
 LEFT JOIN `handshake-production.hai_dev.hai_user_growth_dim` ug
@@ -309,7 +301,6 @@ production_otter AS (
 )
 SELECT
     fpf.profile_id,
-    p.full_name,
     fpf.email,
     fpf.profile_status,
     dim.current_onboarding_stage,
@@ -342,8 +333,6 @@ SELECT
     po.production_first_claimed_at
 
 FROM `hs-ai-production.hai_dev.fact_project_funnel` fpf
-LEFT JOIN `hs-ai-production.hai_dev.fact_fellow_profile` p
-  ON fpf.profile_id = p.profile_id
 LEFT JOIN `hs-ai-production.hai_dev.hai_profiles_dim` dim
   ON fpf.profile_id = dim.profile_id
 LEFT JOIN screener_otter so ON fpf.profile_id = so.profile_id
@@ -426,8 +415,7 @@ production_flags AS (
 )
 SELECT DISTINCT
     COALESCE(s.profile_id, po.profile_id) AS profile_id,
-    p.full_name,
-    COALESCE(p.email, s.email) AS email,
+    COALESCE(fpf.email, s.email) AS email,
     dim.status AS profile_status,
     dim.current_onboarding_stage,
 
@@ -449,8 +437,6 @@ FULL OUTER JOIN production_flags po ON s.profile_id = po.profile_id
 LEFT JOIN `handshake-production.hai_dev.fact_project_funnel` fpf
   ON COALESCE(s.profile_id, po.profile_id) = fpf.profile_id
   AND fpf.project_id = '[hai_screener_project_id]'
-LEFT JOIN `handshake-production.hai_dev.fact_fellow_profile` p
-  ON COALESCE(s.profile_id, po.profile_id) = p.profile_id
 LEFT JOIN `handshake-production.hai_dev.hai_profiles_dim` dim
   ON COALESCE(s.profile_id, po.profile_id) = dim.profile_id
 ```
@@ -464,4 +450,4 @@ LEFT JOIN `handshake-production.hai_dev.hai_profiles_dim` dim
 - **Otter allocated_to_screener (BQ):** The BQ query uses `fact_otter_task_activity` — "allocated" means "has any activity". Fellows who were allocated but never touched the screener won't appear. Use the Fivetran query for true allocation counts.
 - **Profile ID type:** `profile_id` is a UUID string in all tables — do not cast to INTEGER.
 - **Duplicate emails:** Some profile_ids have multiple emails in `fact_otter_task_activity`. Always `GROUP BY profile_id` only (not profile_id + email) in Otter CTEs.
-- **Real vs anonymised email:** Otter-side emails may be anonymised (`@handshakecommunity.ai`). Always prefer `p.email` from `fact_fellow_profile` via `COALESCE(p.email, otter_email)`.
+- **Real vs anonymised email:** Otter-side emails may be anonymised (`@handshakecommunity.ai`). Always prefer `fpf.email` from `fact_project_funnel` via `COALESCE(fpf.email, otter_email)`.
