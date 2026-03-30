@@ -14,7 +14,7 @@ Two query templates that return TRUE/FALSE flags for how far each fellow has pro
 When the user asks for funnel flag queries, ask:
 
 1. **Project ID** — UUID of the HAI project (e.g. `fd0e5d21-5ab4-4007-9b9c-9f69c06d0ac4`)
-2. **Project name slug** — short lowercase label for Fivetran flag naming (e.g. `darwin`, `spectra`)
+2. **Project slug** — a short lowercase name for this project (e.g. `darwin`, `spectra`). This is used to prefix all flag columns in the Fivetran sync query so they don't collide with other projects in Census (e.g. `hai_darwin_pso_allocated_flag`). Ask the user: *"What short name should we use for this project? (e.g. darwin, spectra, proctor)"*
 3. **Is this an Otter/Feather project?** — does it have a screener or production Feather campaign?
    - **No** → generate HAI funnel query only (Track 1)
    - **Yes** → also ask for screener campaign name + production campaign name, then auto-discover steps (see Track 2)
