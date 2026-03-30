@@ -295,7 +295,7 @@ See `references/eligibility.md` § "Education & Background Queries (Dual-Source 
 - **Block-level responses / rubric scores** → `fact_block_values`
 
 ### Ops: Onboarding funnel
-- **Project funnel** → `fact_project_funnel` (PSO → Canvas → Contract → First Claim → First Submit → First Approval)
+- **Project funnel** → `fact_project_funnel` (PSO → Assessment → Contract → First Claim → First Submit → First Approval)
 
 ### Marketing: Paid marketing (cross-channel spend/impressions/clicks)
 - **Unified table** → `hs-ai-production.hai_dev.fact_paid_marketing` — daily ad-level data across LinkedIn, Meta, Reddit, Google. Spend already in USD. Use this for cross-channel comparisons, total spend, CTR, CPM.

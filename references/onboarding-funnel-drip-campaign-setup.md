@@ -53,7 +53,7 @@ When the user asks for funnel flag queries, ask:
 | 07 | `first_task_claimed_flag` | `first_claimed_at_pst` | `IS NOT NULL` |
 | 08 | `first_task_submitted_flag` | `first_task_submitted_pst` | `IS NOT NULL` |
 
-**Note:** Flags 04–06 require an optional `assessments` CTE. Only include if the project has a Canvas assessment — the user must provide the `form_definition_id`. If no assessment, omit the CTE and flags 04–06.
+**Note:** Flags 04–06 require an optional `assessments` CTE. Only include if the project has an assessment — the user must provide the `form_definition_id`. If no assessment, omit the CTE and flags 04–06.
 
 ### Joins
 
@@ -73,7 +73,7 @@ fact_project_funnel           — base, filter by project_id
 -- query_date: YYYY-MM-DD
 -- project_id: [UUID]
 WITH assessments AS (
-    -- OPTIONAL: include only if project has a Canvas assessment
+    -- OPTIONAL: include only if project has an assessment
     -- Replace form_definition_id with the project's assessment form ID
     SELECT
         fr.created_by AS profile_id,

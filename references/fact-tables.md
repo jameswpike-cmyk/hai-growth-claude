@@ -105,8 +105,8 @@ GROUP BY pipeline_stage_name, task_id
 | pso_allocated_pst | TIMESTAMP | When allocated to PSO |
 | pso_completed_pst | TIMESTAMP | When PSO completed |
 | pso_allocated_week | DATE | Week of PSO allocation (Monday start) |
-| canvas_enrolled_at | TIMESTAMP | Canvas enrollment timestamp |
-| canvas_finished_at | TIMESTAMP | Canvas completion timestamp |
+| canvas_enrolled_at | TIMESTAMP | Assessment enrollment timestamp |
+| canvas_finished_at | TIMESTAMP | Assessment completion timestamp |
 | contract_finished_at_pst | TIMESTAMP | Contract signing completion |
 | first_claimed_at_pst | TIMESTAMP | First task claim |
 | first_task_submitted_pst | TIMESTAMP | First task submission |
@@ -120,7 +120,7 @@ GROUP BY pipeline_stage_name, task_id
 
 ### Data Logic
 - **PSO**: Uses earliest of `project_onboarding_started_at` or `prod_onboarded_date` for allocation; `project_onboarding_completed_at` or `prod_onboarded_date` for completion
-- **Canvas**: From `fellow_project_specific_onboarding_tasks` where type contains `canvas` and completed = true
+- **Assessment**: From `fellow_project_specific_onboarding_tasks` where type contains `canvas` and completed = true (column names retain `canvas_` prefix in BQ)
 - **Contract**: From `fellow_project_specific_onboarding_tasks` where type = `document` and completed = true
 
 ### Common Patterns
@@ -129,7 +129,7 @@ GROUP BY pipeline_stage_name, task_id
 ```sql
 SELECT
   COUNT(DISTINCT profile_id) AS allocated,
-  COUNT(DISTINCT CASE WHEN canvas_finished_at IS NOT NULL THEN profile_id END) AS completed_canvas,
+  COUNT(DISTINCT CASE WHEN canvas_finished_at IS NOT NULL THEN profile_id END) AS assessment_completed,
   COUNT(DISTINCT CASE WHEN first_claimed_at_pst IS NOT NULL THEN profile_id END) AS claimed_task,
   COUNT(DISTINCT CASE WHEN first_task_approved_pst IS NOT NULL THEN profile_id END) AS approved_task
 FROM `hs-ai-production.hai_dev.fact_project_funnel`
@@ -140,7 +140,7 @@ WHERE project_id = @project_id
 ```sql
 SELECT
   project_name,
-  ROUND(AVG(DATETIME_DIFF(canvas_enrolled_at, pso_allocated_pst, HOUR)), 1) AS hours_to_canvas,
+  ROUND(AVG(DATETIME_DIFF(canvas_enrolled_at, pso_allocated_pst, HOUR)), 1) AS hours_to_assessment,
   ROUND(AVG(DATETIME_DIFF(first_claimed_at_pst, pso_completed_pst, HOUR)), 1) AS hours_to_first_claim,
   ROUND(AVG(DATETIME_DIFF(first_task_approved_pst, first_task_submitted_pst, HOUR)), 1) AS hours_to_approval
 FROM `hs-ai-production.hai_dev.fact_project_funnel`
@@ -150,14 +150,14 @@ GROUP BY 1
 
 **Bottleneck Analysis:**
 ```sql
-SELECT 'PSO → Canvas' AS stage,
+SELECT 'PSO → Assessment' AS stage,
   COUNT(*) AS started,
   COUNT(canvas_enrolled_at) AS completed,
   ROUND(COUNT(canvas_enrolled_at) * 100.0 / COUNT(*), 1) AS completion_pct
 FROM `hs-ai-production.hai_dev.fact_project_funnel`
 WHERE pso_allocated_pst IS NOT NULL
 UNION ALL
-SELECT 'Canvas → First Claim',
+SELECT 'Assessment → First Claim',
   COUNT(*), COUNT(first_claimed_at_pst),
   ROUND(COUNT(first_claimed_at_pst) * 100.0 / COUNT(*), 1)
 FROM `hs-ai-production.hai_dev.fact_project_funnel`
