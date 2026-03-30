@@ -99,15 +99,15 @@ SELECT DISTINCT
     f.project_name,
     ug.last_touch_utm_source,
 
-    -- Flags
-    f.pso_allocated_pst IS NOT NULL                     AS pso_allocated_flag,
-    f.pso_invitation_accepted_pst IS NOT NULL           AS pso_accepted_flag,
-    f.canvas_assessment_first_started_pst IS NOT NULL   AS assessment_started_flag,
-    COALESCE(a.assessment_submitted_flag, FALSE)        AS assessment_submitted_flag,
-    COALESCE(a.assessment_graded_flag, FALSE)           AS assessment_graded_flag,
-    COALESCE(a.assessment_passed_flag, FALSE)           AS assessment_passed_flag,
-    f.first_claimed_at_pst IS NOT NULL                  AS first_task_claimed_flag,
-    f.first_task_submitted_pst IS NOT NULL              AS first_task_submitted_flag,
+    -- Flags (project-prefixed)
+    f.pso_allocated_pst IS NOT NULL                     AS hai_[slug]_pso_allocated_flag,
+    f.pso_invitation_accepted_pst IS NOT NULL           AS hai_[slug]_pso_accepted_flag,
+    f.canvas_assessment_first_started_pst IS NOT NULL   AS hai_[slug]_assessment_started_flag,
+    COALESCE(a.assessment_submitted_flag, FALSE)        AS hai_[slug]_assessment_submitted_flag,
+    COALESCE(a.assessment_graded_flag, FALSE)           AS hai_[slug]_assessment_graded_flag,
+    COALESCE(a.assessment_passed_flag, FALSE)           AS hai_[slug]_assessment_passed_flag,
+    f.first_claimed_at_pst IS NOT NULL                  AS hai_[slug]_first_task_claimed_flag,
+    f.first_task_submitted_pst IS NOT NULL              AS hai_[slug]_first_task_submitted_flag,
 
     -- Timestamps
     f.pso_allocated_pst,
@@ -315,22 +315,22 @@ SELECT
     dim.current_onboarding_stage,
     fpf.project_name,
 
-    -- HAI platform flags
-    fpf.pso_allocated_pst IS NOT NULL               AS pso_allocated_flag,
-    fpf.pso_invitation_accepted_pst IS NOT NULL     AS pso_accepted_flag,
-    fpf.pso_completed_pst IS NOT NULL               AS pso_completed_flag,
+    -- HAI platform flags (project-prefixed)
+    fpf.pso_allocated_pst IS NOT NULL               AS hai_[slug]_pso_allocated_flag,
+    fpf.pso_invitation_accepted_pst IS NOT NULL     AS hai_[slug]_pso_accepted_flag,
+    fpf.pso_completed_pst IS NOT NULL               AS hai_[slug]_pso_completed_flag,
 
-    -- Otter screener step flags
-    COALESCE(so.[step1_slug]_claimed_flag, FALSE)       AS [step1_slug]_claimed_flag,
-    COALESCE(so.[step2_slug]_started_flag, FALSE)       AS [step2_slug]_started_flag,
-    COALESCE(so.[step2_slug]_completed_flag, FALSE)     AS [step2_slug]_completed_flag,
-    COALESCE(so.[step3_slug]_started_flag, FALSE)       AS [step3_slug]_started_flag,
-    COALESCE(so.[step3_slug]_completed_flag, FALSE)     AS [step3_slug]_completed_flag,
+    -- Otter screener step flags (project-prefixed)
+    COALESCE(so.[step1_slug]_claimed_flag, FALSE)       AS hai_[slug]_[step1_slug]_claimed_flag,
+    COALESCE(so.[step2_slug]_started_flag, FALSE)       AS hai_[slug]_[step2_slug]_started_flag,
+    COALESCE(so.[step2_slug]_completed_flag, FALSE)     AS hai_[slug]_[step2_slug]_completed_flag,
+    COALESCE(so.[step3_slug]_started_flag, FALSE)       AS hai_[slug]_[step3_slug]_started_flag,
+    COALESCE(so.[step3_slug]_completed_flag, FALSE)     AS hai_[slug]_[step3_slug]_completed_flag,
 
-    -- Production flags
-    COALESCE(po.allocated_to_production_flag, FALSE)        AS allocated_to_production_flag,
-    COALESCE(po.production_task_claimed_flag, FALSE)        AS production_task_claimed_flag,
-    COALESCE(po.production_task_submitted_flag, FALSE)      AS production_task_submitted_flag,
+    -- Production flags (project-prefixed)
+    COALESCE(po.allocated_to_production_flag, FALSE)        AS hai_[slug]_allocated_to_production_flag,
+    COALESCE(po.production_task_claimed_flag, FALSE)        AS hai_[slug]_production_task_claimed_flag,
+    COALESCE(po.production_task_submitted_flag, FALSE)      AS hai_[slug]_production_task_submitted_flag,
 
     -- Timestamps
     fpf.pso_allocated_pst,
