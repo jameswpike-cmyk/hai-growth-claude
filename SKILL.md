@@ -14,7 +14,10 @@ description: >
   HAI fellow, marketing, or ops data, lifecycle comms, lifecycle communications,
   email communications, push notifications, lifecycle_communication_messages,
   email engagement, open rate, click rate, delivery rate, iterable,
-  mailgun, product_bucket. When in doubt, trigger this skill.
+  mailgun, product_bucket,
+  onboarding funnel flags, funnel flags, Census sync, Fivetran sync,
+  drip comms query, Iterable funnel, screener flags, Otter screener funnel,
+  Census, fivetran query, funnel query. When in doubt, trigger this skill.
 allowed_commands:
   - gcloud
   - gcloud auth login --enable-gdrive-access
@@ -97,6 +100,11 @@ User asks about...
 │   → Read references/query-patterns.md § "Funnel Analysis & Drop-Off"
 │   → Table: fact_project_funnel
 │
+├─ funnel flags, Census sync, Fivetran sync, drip comms, Iterable segments, screener flags
+│   → STOP. Read references/onboarding-funnel-flags.md NOW.
+│   → Generates two ready-to-paste queries: BQ analysis query + Fivetran sync query.
+│   → Ask user: project_id, slug, and whether project uses Otter/Feather screener.
+│
 ├─ paid marketing spend, impressions, clicks, CTR, CPM, cross-channel spend
 │   → STOP. Read references/fact-paid-marketing.md NOW. Unified table across LinkedIn, Meta, Reddit, Google.
 │   → Use `fact_paid_marketing` for spend/impressions/clicks queries. No microcurrency conversion needed.
@@ -137,6 +145,7 @@ User asks about...
 | **Education, degrees, background** | [references/eligibility.md](references/eligibility.md) — contains the Dual-Source Rule: you must query BOTH `hai_profiles_dim` AND `hai_public.resumes`. |
 | **Approval rates, fellow counts** | [references/query-patterns.md](references/query-patterns.md) § "Approval Rates by Project", § "Active Fellow Counts" |
 | **Onboarding funnel** | [references/query-patterns.md](references/query-patterns.md) § "Funnel Analysis & Drop-Off" |
+| **Funnel flags, Census/Fivetran sync, drip comms queries, screener flags** | [references/onboarding-funnel-flags.md](references/onboarding-funnel-flags.md) — **MANDATORY.** Contains BQ + Fivetran query templates for HAI-only and Otter projects. Ask user for project_id, slug, and Otter y/n before generating. |
 | **Resume search (keywords, experience, education)** | [references/query-patterns.md](references/query-patterns.md) § "Resume Keyword Search", § "Resume Experience & Project Extraction" |
 | **Reviewer performance (R1/R2)** | [references/query-patterns.md](references/query-patterns.md) § "Reviewer Performance (R1/R2)" |
 | **Task lifecycle, comments, block values** | [references/query-patterns.md](references/query-patterns.md) § "Task Lifecycle Analysis", § "Comment / Quality Analysis", § "Block Values Analysis" |
@@ -462,3 +471,4 @@ Report the row count to the user (subtract 4 for the metadata header lines + CSV
 | [references/growth-marketing-logic.md](references/growth-marketing-logic.md) | Marketing funnel definitions, attribution model, channel spend normalization, cost metrics, Framer landing logic | Any cross-channel marketing question, cost metrics, attribution, or funnel analysis |
 | [references/lifecycle-comms.md](references/lifecycle-comms.md) | Schema, efficiency rules, and query patterns for `lifecycle_communication_messages` (~13B rows) | Lifecycle comms, email/push engagement, onboarding emails, HAI communications |
 | [references/query-patterns.md](references/query-patterns.md) | Real SQL examples by use case (HAI + Otter) | You're writing a query and want proven patterns |
+| [references/onboarding-funnel-flags.md](references/onboarding-funnel-flags.md) | BQ analysis + Fivetran sync query templates for HAI and Otter onboarding funnel flags | User asks for funnel flags, Census sync query, Iterable drip segments, or screener step flags |
