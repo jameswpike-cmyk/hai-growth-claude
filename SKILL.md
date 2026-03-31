@@ -19,7 +19,9 @@ description: >
   mailgun, product_bucket,
   onboarding funnel flags, funnel flags, Census sync, Fivetran sync,
   drip comms query, Iterable funnel, screener flags, Otter screener funnel,
-  Census, fivetran query, funnel query. When in doubt, trigger this skill.
+  Census, fivetran query, funnel query, Indeed effectiveness, Indeed job title,
+  Indeed cost per applicant, Indeed ROI, Ashby conversions, referral incentives,
+  referral payouts, referrals_project_match. When in doubt, trigger this skill.
 allowed_commands:
   - gcloud
   - gcloud auth login --enable-gdrive-access
@@ -118,6 +120,10 @@ User asks about...
 │   → STOP. Read references/fact-paid-marketing.md NOW. Unified table across LinkedIn, Meta, Reddit, Google.
 │   → Use `fact_paid_marketing` for spend/impressions/clicks queries. No microcurrency conversion needed.
 │
+├─ Indeed effectiveness, Indeed job title performance, Indeed cost per applicant
+│   → STOP. Read references/fact-paid-marketing.md § "Indeed Effectiveness — Spend × Conversions" NOW.
+│   → Join diamond_growth_indeed (spend) with diamond_growth_ashby (conversions, filter source = Indeed).
+│
 ├─ ad campaign performance (Meta, Google, LinkedIn, Reddit, Indeed, ZipRecruiter)
 │   → See Team Workflows § "Marketing: Ad campaign performance" below for table pointers.
 │
@@ -140,7 +146,11 @@ User asks about...
 │   → STOP. Read references/otter-tables.md NOW. Different identity model (email, not profile_id).
 │   → Read references/query-patterns.md § "Otter Approval Rates" / § "Otter Campaign Health"
 │
-└─ anything else (referrals, UTM, Ashby, resume lookup)
+├─ referrals, referral incentives, referral payouts, referral-to-project mapping
+│   → See Team Workflows § "Marketing: Referrals" below.
+│   → Tables: hai_public.referrals + hs-ai-sandbox.hai_dev.referrals_project_match (join on incentive ID).
+│
+└─ anything else (UTM, Ashby, resume lookup)
     → See Team Workflows below, then check references/query-patterns.md
 ```
 
@@ -162,6 +172,7 @@ User asks about...
 | **Task lifecycle, comments, block values** | [references/query-patterns.md](references/query-patterns.md) § "Task Lifecycle Analysis", § "Comment / Quality Analysis", § "Block Values Analysis" |
 | **Otter/Feather campaigns** | [references/query-patterns.md](references/query-patterns.md) § "Otter Approval Rates", § "Otter Campaign Health" + [references/otter-tables.md](references/otter-tables.md) for schemas |
 | **Paid marketing spend, impressions, clicks (cross-channel, including Indeed)** | [references/fact-paid-marketing.md](references/fact-paid-marketing.md) — `fact_paid_marketing` (LinkedIn, Meta, Reddit, Google) + `diamond_growth_indeed` (Indeed). Spend in USD. UNION ALL pattern included. |
+| **Indeed effectiveness, job title ROI, cost per applicant** | [references/fact-paid-marketing.md](references/fact-paid-marketing.md) § "Indeed Effectiveness — Spend × Conversions" — join `diamond_growth_indeed` (spend) with `diamond_growth_ashby` (conversions). |
 | **Attribution, UTM source, sign-ups by campaign, cost per sign-up/FO/allocated** | [references/fact-hai-attribution.md](references/fact-hai-attribution.md) — best attribution table. Enriched campaign/ad/adset names, Indeed backfill, funnel stage definitions, cost metric formulas. |
 | **Fellow engagement score / engagement tiers** | [references/engagement-score.md](references/engagement-score.md) — classifies fellows into no/low/medium/high engagement from `fact_project_funnel` email open + funnel milestones. |
 | **Lifecycle comms, email comms, push notifications, fellows invited** | [references/lifecycle-comms.md](references/lifecycle-comms.md) — standalone reference. No `profile_id` — join via `user_id` or `email_address`. **~13B rows — always filter by `sent_at`.** |
@@ -319,7 +330,10 @@ See `references/eligibility.md` § "Education & Background Queries (Dual-Source 
 - **Ashby ATS candidates** → `diamond_growth_ashby`
 
 ### Marketing: Referrals
-- **Referral status / payouts** → `hai_public.referrals`
+- **Referral status / payouts** → `hai_public.referrals` (created_at, status, awarded_at, paid_at, incentive_amount_cents)
+- **Incentive-to-project mapping** → `hs-ai-sandbox.hai_dev.referrals_project_match` (Google Sheets-backed). Maps `incentive_rule_id` to project name/ID with incentive amount and status.
+- **Join**: `hai_public.referrals.referral_incentive_id = referrals_project_match.incentive_rule_id`
+- **Incentive amount**: `referrals` stores `incentive_amount_cents` (divide by 100 for dollars); `referrals_project_match` stores `incentive_amount` as STRING
 
 ### Otter / Feather campaigns
 > **STOP — you MUST read `references/otter-tables.md` NOW before writing any Otter/Feather SQL. The identity model, statuses, and grouping are all different from HAI. Do not guess.**

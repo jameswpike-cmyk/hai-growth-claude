@@ -240,3 +240,123 @@ WHERE Date >= DATE_SUB(CURRENT_DATE(), INTERVAL 30 DAY)
 GROUP BY date, job_title, campaign
 ORDER BY spend DESC
 ```
+
+---
+
+## Indeed Effectiveness — Spend × Conversions
+
+Indeed spend lives in `diamond_growth_indeed` (above), but **conversion data** (actual applicants) lives in a separate table:
+
+**Location**: `hs-ai-production.hai_dev.diamond_growth_ashby`
+**Source**: View over `handshake-production.hai_dev.diamond_growth_ashby` (Ashby ATS export)
+
+### Ashby Schema (Indeed-relevant columns)
+
+| Column | Type | Description |
+|--------|------|-------------|
+| `Job_Consideration_s_Candidate` | STRING | Candidate name |
+| `Job_Consideration_s_Candidate_s_Email_Address__Primary__Personal_` | STRING | Candidate email |
+| `Job_Consideration_s_Job` | STRING | Job title (e.g. `3D Slicer Specialist - AI Trainer`) |
+| `Job_Consideration_s_Applied_via_Job_Posting` | STRING | Job posting source (e.g. `Project Touchstone`) |
+| `Job_Consideration_s_Source` | STRING | Source channel — filter to `'Inbound: Indeed Listings'` for Indeed conversions |
+| `Job_Consideration_s_Application_Form_s_Submitted_At` | STRING | Application submission timestamp (ISO 8601 string, not TIMESTAMP) |
+
+### Filtering to Indeed applicants
+
+```sql
+WHERE Job_Consideration_s_Source = 'Inbound: Indeed Listings'
+```
+
+Other Indeed-adjacent sources exist (e.g. `'Inbound: Applied'` may include Indeed organic) but `'Inbound: Indeed Listings'` is the cleanest signal for paid Indeed conversions.
+
+### Join pattern: Indeed spend × Ashby conversions
+
+The join key is **job title**, but the formats differ:
+- Indeed `Job`: `MEDICINE EXPERT (MD)` (uppercase, no suffix in some rows) or `FINANCE EXPERT - AI Trainer | Part-Time | Remote`
+- Ashby `Job_Consideration_s_Job`: `3D Slicer Specialist - AI Trainer ` (mixed case, trailing space)
+
+Use `UPPER` + `TRIM` + the `REGEXP_REPLACE` pattern to normalize both sides:
+
+```sql
+WITH indeed_spend AS (
+    SELECT
+        UPPER(TRIM(REGEXP_REPLACE(Job, r' - AI Trainer.*', ''))) AS job_title,
+        ROUND(SUM(Spend), 2) AS total_spend,
+        SUM(Impressions) AS impressions,
+        SUM(Clicks) AS clicks,
+        SUM(Applies) AS indeed_applies
+    FROM `hs-ai-sandbox.hai_dev.diamond_growth_indeed`
+    GROUP BY job_title
+),
+
+ashby_conversions AS (
+    SELECT
+        UPPER(TRIM(REGEXP_REPLACE(Job_Consideration_s_Job, r' - AI Trainer.*', ''))) AS job_title,
+        COUNT(*) AS ashby_applicants
+    FROM `hs-ai-production.hai_dev.diamond_growth_ashby`
+    WHERE Job_Consideration_s_Source = 'Inbound: Indeed Listings'
+    GROUP BY job_title
+)
+
+SELECT
+    i.job_title,
+    i.total_spend,
+    i.impressions,
+    i.clicks,
+    i.indeed_applies,
+    COALESCE(a.ashby_applicants, 0) AS ashby_applicants,
+    ROUND(SAFE_DIVIDE(i.total_spend, a.ashby_applicants), 2) AS cost_per_applicant
+FROM indeed_spend i
+LEFT JOIN ashby_conversions a ON i.job_title = a.job_title
+ORDER BY total_spend DESC
+```
+
+### Job title effectiveness (best/worst ROI)
+
+```sql
+WITH indeed_spend AS (
+    SELECT
+        UPPER(TRIM(REGEXP_REPLACE(Job, r' - AI Trainer.*', ''))) AS job_title,
+        ROUND(SUM(Spend), 2) AS total_spend,
+        SUM(Clicks) AS clicks
+    FROM `hs-ai-sandbox.hai_dev.diamond_growth_indeed`
+    GROUP BY job_title
+),
+
+ashby_conversions AS (
+    SELECT
+        UPPER(TRIM(REGEXP_REPLACE(Job_Consideration_s_Job, r' - AI Trainer.*', ''))) AS job_title,
+        COUNT(*) AS ashby_applicants
+    FROM `hs-ai-production.hai_dev.diamond_growth_ashby`
+    WHERE Job_Consideration_s_Source = 'Inbound: Indeed Listings'
+    GROUP BY job_title
+)
+
+SELECT
+    i.job_title,
+    i.total_spend,
+    i.clicks,
+    COALESCE(a.ashby_applicants, 0) AS applicants,
+    ROUND(SAFE_DIVIDE(i.total_spend, a.ashby_applicants), 2) AS cost_per_applicant,
+    ROUND(SAFE_DIVIDE(a.ashby_applicants, i.clicks) * 100, 1) AS click_to_applicant_pct
+FROM indeed_spend i
+LEFT JOIN ashby_conversions a ON i.job_title = a.job_title
+WHERE i.total_spend > 0
+ORDER BY cost_per_applicant ASC
+```
+
+### Time-bounded effectiveness (e.g. last 30 days)
+
+Add date filters to both CTEs when analyzing a specific period:
+
+```sql
+-- In indeed_spend CTE:
+WHERE Date >= DATE_SUB(CURRENT_DATE(), INTERVAL 30 DAY)
+
+-- In ashby_conversions CTE:
+WHERE Job_Consideration_s_Source = 'Inbound: Indeed Listings'
+  AND SAFE.PARSE_TIMESTAMP('%Y-%m-%dT%H:%M:%E*SZ', Job_Consideration_s_Application_Form_s_Submitted_At)
+      >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 30 DAY)
+```
+
+Note: Ashby `Submitted_At` is a STRING — use `SAFE.PARSE_TIMESTAMP` to cast it.
