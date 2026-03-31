@@ -50,15 +50,11 @@ availability AS (
 ),
 
 on_hold AS (
-  SELECT p.id AS profile_id, STRING_AGG(hold.project, ',') AS projects
-  FROM (
-    SELECT string_field_2 AS email, string_field_1 AS project
-    FROM `hs-ai-sandbox.hai_dev.hai_on_hold`
-    WHERE string_field_2 != 'Email'
-  ) AS hold
-  LEFT JOIN `hs-ai-production.hai_public.profiles` p ON hold.email = p.email
-  WHERE p.id IS NOT NULL
-  GROUP BY p.id
+  -- Sheet migrated from email to profile_id as PK (string_field_2 = profile_id, string_field_0 = project)
+  SELECT string_field_2 AS profile_id, STRING_AGG(string_field_0, ',') AS projects
+  FROM `hs-ai-sandbox.hai_dev.hai_on_hold`
+  WHERE string_field_2 != 'Email'  -- skip header row
+  GROUP BY string_field_2
 ),
 
 kyc AS (
@@ -135,7 +131,7 @@ WHERE a.available IN ('Available - Idle', 'Available - Project Paused')
 | Available (idle) | `hai_dev.fact_fellow_status` | No activity in 20+ days, OR offboarded, OR project paused |
 | Otter KYC verified | `hai_dev.hai_kyc_fact` | `kyc_completed IS TRUE OR blocking_kyc_completed IS TRUE` (required for Otter eligibility — note: `profiles.status = 'verified'` alone is insufficient due to legacy silent KYC) |
 | Not Otter-ringfenced | `hai_dev.fact_fellow_status` | No Otter activity in last 30 days |
-| Not on hold | `hs-ai-sandbox.hai_dev.hai_on_hold` | Email not in on-hold sheet |
+| Not on hold | `hs-ai-sandbox.hai_dev.hai_on_hold` | profile_id not in on-hold sheet (sheet uses profile_id as PK, not email) |
 | No OPT/CPT needed | `hai_public.survey_responses` | `requires_opt_or_cpt_sponsorship` is false or null |
 | US-based | `hai_public.profiles` | `country_code` contains 'us' or 'united states' |
 | Not internal | any email field | Not `@joinhandshake.com` |
