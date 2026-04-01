@@ -9,8 +9,8 @@
   },
   "plugins": [
     {
-      "name": "hai-growth-bigquery",
-      "source": "./plugins/hai-growth-bigquery",
+      "name": "growth-claude",
+      "source": "./plugins/growth-claude",
       "description": "Growth team data layer for querying, analyzing, and actioning marketing and fellow data",
       "version": "1.5.1",
       "category": "data"

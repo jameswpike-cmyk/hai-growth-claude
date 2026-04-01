@@ -24,7 +24,7 @@ Create `~/.claude/commands/growth.md`:
 
 ```markdown
 ---
-name: hai-growth-bigquery
+name: growth-claude
 description: >
   BigQuery semantic data layer for Handshake AI (HAI). Provides schema knowledge,
   SQL patterns, and data quality rules.
