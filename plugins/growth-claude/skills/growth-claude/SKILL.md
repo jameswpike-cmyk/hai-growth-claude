@@ -48,6 +48,10 @@ allowed_commands:
 
 # Growth Team Data Layer
 
+> **CRITICAL — READ THIS FIRST:** All `references/*.md` files in this skill must be read using the full absolute path:
+> `/Users/james.pike/hai-growth-claude/plugins/growth-claude/skills/growth-claude/references/<filename>`
+> The working directory is the user's Google Drive. The Read tool does NOT expand `~`. Relative paths and `~/` will always fail.
+
 ## Prerequisites
 
 **Verify these every time this skill is invoked.**
@@ -80,11 +84,17 @@ These commands will open a browser for the user to complete OAuth. Wait for each
 **`--enable-gdrive-access` is required** — the eligibility filter queries `hai_on_hold`, a Google Sheets-backed table that needs Drive OAuth scope.
 
 ### 4. Read reference files using absolute paths
-When reading reference files (eligibility.md, query-patterns.md, etc.), always use the absolute path — the working directory is NOT the skill directory:
+The working directory is the user's Google Drive — NOT the skill directory. The Read tool does NOT expand `~`. You MUST use the full absolute path for every reference file:
+
 ```
-~/hai-growth-claude/plugins/growth-claude/skills/growth-claude/references/<filename>
+/Users/james.pike/hai-growth-claude/plugins/growth-claude/skills/growth-claude/references/<filename>
 ```
-Do NOT use relative paths like `references/eligibility.md` — the Read tool will fail because the working directory is the user's Google Drive, not the skill directory.
+
+**Examples:**
+- `references/eligibility.md` → `/Users/james.pike/hai-growth-claude/plugins/growth-claude/skills/growth-claude/references/eligibility.md`
+- `references/query-patterns.md` → `/Users/james.pike/hai-growth-claude/plugins/growth-claude/skills/growth-claude/references/query-patterns.md`
+
+Every time this skill says to read `references/foo.md`, translate that to the full path above. Using a relative path or `~/` prefix will always fail with "File does not exist".
 
 ### 5. Present query plan for approval (once)
 **Before running your first `bq query`, present the user with a plan and get approval.**
