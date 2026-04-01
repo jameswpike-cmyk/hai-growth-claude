@@ -1,0 +1,19 @@
+{
+  "name": "growth-claude",
+  "owner": {
+    "name": "Growth Team"
+  },
+  "metadata": {
+    "description": "Growth team data layer for querying, analyzing, and actioning marketing and fellow data",
+    "version": "1.0.0"
+  },
+  "plugins": [
+    {
+      "name": "hai-growth-bigquery",
+      "source": "./plugins/hai-growth-bigquery",
+      "description": "Growth team data layer for querying, analyzing, and actioning marketing and fellow data",
+      "version": "1.5.0",
+      "category": "data"
+    }
+  ]
+}
