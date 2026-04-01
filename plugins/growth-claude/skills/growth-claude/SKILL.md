@@ -79,13 +79,21 @@ These commands will open a browser for the user to complete OAuth. Wait for each
 
 **`--enable-gdrive-access` is required** — the eligibility filter queries `hai_on_hold`, a Google Sheets-backed table that needs Drive OAuth scope.
 
-### 4. Present query plan for approval (once)
-**Before running your first `bq query`, present the user with a plan and get approval:**
-- Which table(s) will be queried
-- Key filters and logic
-- What the output will look like
+### 4. Read reference files using absolute paths
+When reading reference files (eligibility.md, query-patterns.md, etc.), always use the absolute path — the working directory is NOT the skill directory:
+```
+~/hai-growth-claude/plugins/growth-claude/skills/growth-claude/references/<filename>
+```
+Do NOT use relative paths like `references/eligibility.md` — the Read tool will fail because the working directory is the user's Google Drive, not the skill directory.
 
-Use `EnterPlanMode` and wait for approval before executing. Once the user approves the plan, proceed with execution — do not ask for approval again for follow-up queries within the same task (e.g., retries, refinements, exports, or verification queries).
+### 5. Present query plan for approval (once)
+**Before running your first `bq query`, present the user with a plan and get approval.**
+
+For **standard eligibility/fellow search queries** (clear criteria, no ambiguity): present a brief inline bullet-point plan in your response — no need to use `EnterPlanMode`. This keeps the flow fast.
+
+For **complex or ambiguous queries** (multiple approaches, unclear scope, destructive ops): use `EnterPlanMode` for full plan review.
+
+In either case, once the user approves, proceed with execution — do not ask for approval again for follow-up queries within the same task (e.g., retries, refinements, exports, or verification queries).
 
 ---
 
@@ -270,6 +278,15 @@ This UNNEST pattern applies to any multi-field resume search: company + title, s
 
 ### CSV Export: Avoid Security Warnings
 Do NOT use `cat` heredocs or `$()` command substitution for CSV export — these trigger Claude Code security prompts. Use `printf` + `bq query >> file` as shown in the Google Drive CSV Export section.
+
+### BQ Default Row Limit
+`bq query` silently caps output at **100 rows** by default. Always add `--max_rows=50000` to every `bq query` call for ops/fellow exports:
+```bash
+bq query --use_legacy_sql=false --format=csv --max_rows=50000 <<'EOF' >> file.csv
+...
+EOF
+```
+Failing to set this means the CSV will silently truncate at 100 rows with no error.
 
 ---
 
@@ -457,12 +474,13 @@ printf '# source_tables: <tables>\n# query_date: YYYY-MM-DD\n# query: <summary>\
 
 ### Step 4: Run query and append results
 ```bash
-bq query --format=csv --use_legacy_sql=false <<'EOF' >> "<path>/YYYY-MM-DD_<description>.csv"
+bq query --format=csv --use_legacy_sql=false --max_rows=50000 <<'EOF' >> "<path>/YYYY-MM-DD_<description>.csv"
 SELECT ...
 EOF
 ```
+**`--max_rows=50000` is required** — without it, bq silently truncates to 100 rows. Do NOT run a separate count query first; just run the export directly.
 
-### Step 5: Append row count
+### Step 5: Report row count
 ```bash
 wc -l < "<path>/YYYY-MM-DD_<description>.csv"
 ```
@@ -472,6 +490,7 @@ Report the row count to the user (subtract 4 for the metadata header lines + CSV
 - **File naming**: `YYYY-MM-DD_<description>.csv` (lowercase, hyphens, max 60 chars)
 - **Metadata header is required**: every CSV must start with `# source_tables`, `# query_date`, and `# query` lines
 - **Use `printf` for header, heredoc for query, `>>` to append** — do NOT use `cat` heredocs for the metadata, `$()` substitution, or backslash-escaped paths (see Error Prevention)
+- **Always use `--max_rows=50000`** — never omit this flag
 - If export fails, don't block — results are already in the terminal
 
 ---
