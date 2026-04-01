@@ -144,7 +144,7 @@ User asks about...
 │
 ├─ Otter / Feather
 │   → STOP. Read references/otter-tables.md NOW. Different identity model (email, not profile_id).
-│   → Read references/query-patterns.md § "Otter Approval Rates" / § "Otter Campaign Health"
+│   → Read references/query-patterns-otter.md for all Otter SQL patterns.
 │
 ├─ referrals, referral incentives, referral payouts, referral-to-project mapping
 │   → See Team Workflows § "Marketing: Referrals" below.
@@ -170,7 +170,7 @@ User asks about...
 | **Resume search (keywords, experience, education)** | [references/query-patterns.md](references/query-patterns.md) § "Resume Keyword Search", § "Resume Experience & Project Extraction" |
 | **Reviewer performance (R1/R2)** | [references/query-patterns.md](references/query-patterns.md) § "Reviewer Performance (R1/R2)" |
 | **Task lifecycle, comments, block values** | [references/query-patterns.md](references/query-patterns.md) § "Task Lifecycle Analysis", § "Comment / Quality Analysis", § "Block Values Analysis" |
-| **Otter/Feather campaigns** | [references/query-patterns.md](references/query-patterns.md) § "Otter Approval Rates", § "Otter Campaign Health" + [references/otter-tables.md](references/otter-tables.md) for schemas |
+| **Otter/Feather campaigns** | [references/query-patterns-otter.md](references/query-patterns-otter.md) — approval rates, campaign health, cross-table joins + [references/otter-tables.md](references/otter-tables.md) for schemas |
 | **Paid marketing spend, impressions, clicks (cross-channel, including Indeed)** | [references/fact-paid-marketing.md](references/fact-paid-marketing.md) — `fact_paid_marketing` (LinkedIn, Meta, Reddit, Google) + `diamond_growth_indeed` (Indeed). Spend in USD. UNION ALL pattern included. |
 | **Indeed effectiveness, job title ROI, cost per applicant** | [references/fact-paid-marketing.md](references/fact-paid-marketing.md) § "Indeed Effectiveness — Spend × Conversions" — join `diamond_growth_indeed` (spend) with `diamond_growth_ashby` (conversions). |
 | **Attribution, UTM source, sign-ups by campaign, cost per sign-up/FO/allocated** | [references/fact-hai-attribution.md](references/fact-hai-attribution.md) — best attribution table. Enriched campaign/ad/adset names, Indeed backfill, funnel stage definitions, cost metric formulas. |
@@ -495,5 +495,6 @@ Report the row count to the user (subtract 4 for the metadata header lines + CSV
 | [references/fact-paid-marketing.md](references/fact-paid-marketing.md) | Unified daily ad-level spend/impressions/clicks across LinkedIn, Meta, Reddit, Google + Indeed (`diamond_growth_indeed`) | Paid marketing spend, cross-channel spend comparison, CTR, CPM, Indeed job spend |
 | [references/fact-hai-attribution.md](references/fact-hai-attribution.md) | Best attribution table — enriched UTM/campaign/ad/adset names, Indeed backfill, funnel stage definitions, cost metric formulas | Attribution, sign-ups by channel/campaign, cost per sign-up/FO/allocated/activated |
 | [references/lifecycle-comms.md](references/lifecycle-comms.md) | Schema, efficiency rules, and query patterns for `lifecycle_communication_messages` (~13B rows) | Lifecycle comms, email/push engagement, onboarding emails, HAI communications |
-| [references/query-patterns.md](references/query-patterns.md) | Real SQL examples by use case (HAI + Otter) | You're writing a query and want proven patterns |
+| [references/query-patterns.md](references/query-patterns.md) | Fellow search, resume patterns, funnel analysis, active counts, cross-table joins | You're writing a fellow search, resume, or funnel query |
+| [references/query-patterns-otter.md](references/query-patterns-otter.md) | Otter/Feather SQL patterns: approval rates, campaign health, cross-table joins | You're writing any Otter or Feather SQL |
 | [references/onboarding-funnel-drip-campaign-setup.md](references/onboarding-funnel-drip-campaign-setup.md) | BQ analysis + Fivetran sync query templates for HAI and Otter onboarding funnel flags | User asks for funnel flags, Census sync query, Iterable drip segments, or screener step flags |
