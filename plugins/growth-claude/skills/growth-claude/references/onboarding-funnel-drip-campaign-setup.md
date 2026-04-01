@@ -51,6 +51,7 @@ When the user asks for funnel flag queries, ask:
 | 06 | `assessment_passed_flag` | `form_autograder_results.passed` | `COALESCE(a.assessment_passed_flag, FALSE)` |
 | 07 | `first_task_claimed_flag` | `first_claimed_at_pst` | `IS NOT NULL` |
 | 08 | `first_task_submitted_flag` | `first_task_submitted_pst` | `IS NOT NULL` |
+| 09 | `offboarded_flag` | `offboarded` | `COALESCE(f.offboarded, FALSE)` |
 
 **Note:** Flags 04–06 require an optional `assessments` CTE. Only include if the project has an assessment — the user must provide the `form_definition_id`. If no assessment, omit the CTE and flags 04–06.
 
@@ -105,6 +106,7 @@ SELECT DISTINCT
     COALESCE(a.assessment_passed_flag, FALSE)           AS hai_[slug]_assessment_passed_flag,
     f.first_claimed_at_pst IS NOT NULL                  AS hai_[slug]_first_task_claimed_flag,
     f.first_task_submitted_pst IS NOT NULL              AS hai_[slug]_first_task_submitted_flag,
+    COALESCE(f.offboarded, FALSE)                       AS hai_[slug]_offboarded_flag,
 
     -- Timestamps
     f.pso_allocated_pst,
@@ -165,7 +167,8 @@ SELECT DISTINCT
     COALESCE(a.assessment_graded_flag, FALSE)           AS hai_[slug]_assessment_graded_flag,
     COALESCE(a.assessment_passed_flag, FALSE)           AS hai_[slug]_assessment_passed_flag,
     f.first_claimed_at_pst IS NOT NULL                  AS hai_[slug]_first_task_claimed_flag,
-    f.first_task_submitted_pst IS NOT NULL              AS hai_[slug]_first_task_submitted_flag
+    f.first_task_submitted_pst IS NOT NULL              AS hai_[slug]_first_task_submitted_flag,
+    COALESCE(f.offboarded, FALSE)                       AS hai_[slug]_offboarded_flag
 
 FROM `handshake-production.hai_dev.fact_project_funnel` f
 LEFT JOIN `handshake-production.hai_dev.hai_profiles_dim` dim
@@ -310,6 +313,7 @@ SELECT
     fpf.pso_allocated_pst IS NOT NULL               AS hai_[slug]_pso_allocated_flag,
     fpf.pso_invitation_accepted_pst IS NOT NULL     AS hai_[slug]_pso_accepted_flag,
     fpf.pso_completed_pst IS NOT NULL               AS hai_[slug]_pso_completed_flag,
+    COALESCE(fpf.offboarded, FALSE)                 AS hai_[slug]_offboarded_flag,
 
     -- Otter screener step flags (project-prefixed)
     COALESCE(so.[step1_slug]_claimed_flag, FALSE)       AS hai_[slug]_[step1_slug]_claimed_flag,
@@ -430,7 +434,8 @@ SELECT DISTINCT
     COALESCE(s.[step3_slug]_completed_flag, FALSE)          AS hai_[slug]_[step3_slug]_completed_flag,
     COALESCE(po.allocated_to_production_flag, FALSE)        AS hai_[slug]_allocated_to_production_flag,
     COALESCE(po.production_task_claimed_flag, FALSE)        AS hai_[slug]_production_task_claimed_flag,
-    COALESCE(po.production_task_submitted_flag, FALSE)      AS hai_[slug]_production_task_submitted_flag
+    COALESCE(po.production_task_submitted_flag, FALSE)      AS hai_[slug]_production_task_submitted_flag,
+    COALESCE(fpf.offboarded, FALSE)                         AS hai_[slug]_offboarded_flag
 
 FROM screener_flags s
 FULL OUTER JOIN production_flags po ON s.profile_id = po.profile_id

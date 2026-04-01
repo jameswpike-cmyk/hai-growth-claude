@@ -112,6 +112,8 @@ GROUP BY pipeline_stage_name, task_id
 | first_task_submitted_pst | TIMESTAMP | First task submission |
 | first_task_reviewed_pst | TIMESTAMP | First task review |
 | first_task_approved_pst | TIMESTAMP | First task approval |
+| offboarded | BOOLEAN | Whether the fellow has been offboarded from this project |
+| onboarding_status | STRING | Current onboarding status (nullable) |
 
 ### Key Joins
 - `profile_id` → `fact_fellow_perf.profile_id`
