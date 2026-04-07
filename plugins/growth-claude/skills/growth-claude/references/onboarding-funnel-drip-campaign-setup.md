@@ -30,6 +30,7 @@ When the user asks for funnel flag queries, ask:
 | `profile_status` | `fact_project_funnel` (`profile_status`) | `verified`, `pending`, etc. |
 | `current_onboarding_stage` | `hai_profiles_dim` | `fully-onboarded`, etc. |
 | `project_name` | `fact_project_funnel` | |
+| `project_status` | `hai_public.annotation_projects` | `active`, `paused`, etc. — JOIN `annotation_projects ap ON fpf.project_id = ap.id` |
 | `last_touch_utm_source` | `hai_user_growth_dim` | HAI projects only — omit for Otter-only output |
 
 ---
@@ -59,6 +60,7 @@ When the user asks for funnel flag queries, ask:
 
 ```
 fact_project_funnel           — base, filter by project_id (email, profile_status, project_name already here)
+  LEFT JOIN annotation_projects     ON project_id = id             — project_status
   LEFT JOIN hai_profiles_dim        ON profile_id = profile_id     — current_onboarding_stage
   LEFT JOIN hai_user_growth_dim     ON profile_id = user_id        — last_touch_utm_source
   LEFT JOIN assessments CTE         ON profile_id = profile_id     — assessment flags (optional)
@@ -95,6 +97,7 @@ SELECT DISTINCT
     f.profile_status,
     dim.current_onboarding_stage,
     f.project_name,
+    ap.status AS project_status,
     ug.last_touch_utm_source,
 
     -- Flags (project-prefixed)
@@ -116,6 +119,8 @@ SELECT DISTINCT
     f.first_task_submitted_pst
 
 FROM `hs-ai-production.hai_dev.fact_project_funnel` f
+LEFT JOIN `hs-ai-production.hai_public.annotation_projects` ap
+  ON f.project_id = ap.id
 LEFT JOIN `hs-ai-production.hai_dev.hai_profiles_dim` dim
   ON f.profile_id = dim.profile_id
 LEFT JOIN `hs-ai-production.hai_dev.hai_user_growth_dim` ug
@@ -157,6 +162,7 @@ SELECT DISTINCT
     f.profile_status,
     dim.current_onboarding_stage,
     f.project_name,
+    ap.status AS project_status,
     ug.last_touch_utm_source,
 
     -- Flags (project-prefixed for Census)
@@ -171,6 +177,8 @@ SELECT DISTINCT
     COALESCE(f.offboarded, FALSE)                       AS hai_[slug]_offboarded_flag
 
 FROM `handshake-production.hai_dev.fact_project_funnel` f
+LEFT JOIN `handshake-production.hai_public.annotation_projects` ap
+  ON f.project_id = ap.id
 LEFT JOIN `handshake-production.hai_dev.hai_profiles_dim` dim
   ON f.profile_id = dim.profile_id
 LEFT JOIN `handshake-production.hai_dev.hai_user_growth_dim` ug
@@ -308,6 +316,7 @@ SELECT
     fpf.profile_status,
     dim.current_onboarding_stage,
     fpf.project_name,
+    ap.status AS project_status,
 
     -- HAI platform flags (project-prefixed)
     fpf.pso_allocated_pst IS NOT NULL               AS hai_[slug]_pso_allocated_flag,
@@ -337,6 +346,8 @@ SELECT
     po.production_first_claimed_at
 
 FROM `hs-ai-production.hai_dev.fact_project_funnel` fpf
+LEFT JOIN `hs-ai-production.hai_public.annotation_projects` ap
+  ON fpf.project_id = ap.id
 LEFT JOIN `hs-ai-production.hai_dev.hai_profiles_dim` dim
   ON fpf.profile_id = dim.profile_id
 LEFT JOIN screener_otter so ON fpf.profile_id = so.profile_id
@@ -422,6 +433,7 @@ SELECT DISTINCT
     COALESCE(fpf.email, s.email) AS email,
     dim.status AS profile_status,
     dim.current_onboarding_stage,
+    ap.status AS project_status,
 
     -- HAI + Otter flags (project-prefixed for Census)
     fpf.pso_allocated_pst IS NOT NULL                       AS hai_[slug]_pso_allocated_flag,
@@ -442,6 +454,8 @@ FULL OUTER JOIN production_flags po ON s.profile_id = po.profile_id
 LEFT JOIN `handshake-production.hai_dev.fact_project_funnel` fpf
   ON COALESCE(s.profile_id, po.profile_id) = fpf.profile_id
   AND fpf.project_id = '[hai_screener_project_id]'
+LEFT JOIN `handshake-production.hai_public.annotation_projects` ap
+  ON fpf.project_id = ap.id
 LEFT JOIN `handshake-production.hai_dev.hai_profiles_dim` dim
   ON COALESCE(s.profile_id, po.profile_id) = dim.profile_id
 ```
