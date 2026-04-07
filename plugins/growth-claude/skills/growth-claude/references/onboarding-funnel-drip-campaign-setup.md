@@ -30,7 +30,7 @@ When the user asks for funnel flag queries, ask:
 | `profile_status` | `fact_project_funnel` (`profile_status`) | `verified`, `pending`, etc. |
 | `current_onboarding_stage` | `hai_profiles_dim` | `fully-onboarded`, etc. |
 | `project_name` | `fact_project_funnel` | |
-| `project_status` | `hai_public.annotation_projects` | `active`, `paused`, etc. — JOIN `annotation_projects ap ON fpf.project_id = ap.id` |
+| `hai_[slug]_project_status` | `hai_public.annotation_projects` | `active`, `paused`, etc. — JOIN `annotation_projects ap ON fpf.project_id = ap.id`. Slug-prefixed because it's project-specific. |
 | `last_touch_utm_source` | `hai_user_growth_dim` | HAI projects only — omit for Otter-only output |
 
 ---
@@ -97,7 +97,7 @@ SELECT DISTINCT
     f.profile_status,
     dim.current_onboarding_stage,
     f.project_name,
-    ap.status AS project_status,
+    ap.status AS hai_[slug]_project_status,
     ug.last_touch_utm_source,
 
     -- Flags (project-prefixed)
@@ -162,7 +162,7 @@ SELECT DISTINCT
     f.profile_status,
     dim.current_onboarding_stage,
     f.project_name,
-    ap.status AS project_status,
+    ap.status AS hai_[slug]_project_status,
     ug.last_touch_utm_source,
 
     -- Flags (project-prefixed for Census)
@@ -316,7 +316,7 @@ SELECT
     fpf.profile_status,
     dim.current_onboarding_stage,
     fpf.project_name,
-    ap.status AS project_status,
+    ap.status AS hai_[slug]_project_status,
 
     -- HAI platform flags (project-prefixed)
     fpf.pso_allocated_pst IS NOT NULL               AS hai_[slug]_pso_allocated_flag,
@@ -433,7 +433,7 @@ SELECT DISTINCT
     COALESCE(fpf.email, s.email) AS email,
     dim.status AS profile_status,
     dim.current_onboarding_stage,
-    ap.status AS project_status,
+    ap.status AS hai_[slug]_project_status,
 
     -- HAI + Otter flags (project-prefixed for Census)
     fpf.pso_allocated_pst IS NOT NULL                       AS hai_[slug]_pso_allocated_flag,
