@@ -1,14 +1,17 @@
 # hai-growth-claude
 
-BigQuery semantic data layer for the Handshake AI Growth team. This is a [Claude Code plugin](https://docs.anthropic.com/en/docs/claude-code) that gives Claude knowledge of our schema, query patterns, and data quality rules.
+AI-powered workflow layer for the Handshake AI Growth team. Instead of being the middleware between tools yourself — jumping between BigQuery, Slack, Google Sheets, and Iterable — you describe what you need in plain English and Claude does the heavy lifting.
+
+Whether you're qualifying 500 Biology PhDs for a project, diagnosing a funnel drop-off, setting up drip campaigns, or comparing ad spend across channels, Growth Claude should be your starting point for every use case.
+
+This is a [Claude Code plugin](https://docs.anthropic.com/en/docs/claude-code) that gives Claude deep knowledge of HAI's data, schemas, query patterns, and operational workflows.
 
 ## What It Does
 
-Provides Claude with context to query and analyze:
-- **Fellow profiles** — eligibility & availability, resume data, fellow search/matching
-- **Project funnels** — onboarding, engagement scoring, pipeline state, project lifecycle
-- **Marketing & campaigns** — Meta/Google/LinkedIn/Reddit ads, UTM tracking, CPA, lifecycle comms
-- **Fellow performance** — approval rates, TIC, AHT, reviewer metrics (R1/R2)
+- **Fellow sourcing & eligibility** — find available fellows matching project criteria, apply eligibility + availability logic, export CSVs for SPL handoff
+- **Project funnels** — onboarding conversion, engagement scoring, drop-off diagnosis, drip campaign setup for Iterable
+- **Marketing & campaigns** — Meta/Google/LinkedIn/Reddit/Indeed ads, UTM attribution, CPA, lifecycle comms performance
+- **Fellow & reviewer performance** — approval rates, TIC, AHT, R1/R2 reviewer metrics, outlier detection
 
 ## Setup
 
