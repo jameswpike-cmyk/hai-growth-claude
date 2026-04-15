@@ -18,7 +18,7 @@
 
 ## Standard Output Query
 
-**This is the reference SELECT + JOIN that produces the standard output columns defined in SKILL.md.** Use this as the base for every ops/fellow query. Add criteria-specific columns after column 18.
+**This is the reference SELECT + JOIN that produces the standard output columns defined in SKILL.md.** Use this as the base for every ops/fellow query. Add criteria-specific columns after column 19.
 
 ```sql
 WITH
@@ -128,11 +128,10 @@ WHERE a.available IN ('Available - Idle', 'Available - Project Paused')
   AND (LOWER(bfs.country_code) LIKE '%us%' OR LOWER(bfs.country_code) LIKE '%united states%')
   AND NOT LOWER(bfs.email) LIKE '%@joinhandshake.com%'
 
--- OTTER ELIGIBILITY: MUST add BOTH of the following lines when querying for Otter eligibility.
--- 1. KYC: hai_public.profiles.status = 'verified' is NOT sufficient — kyc_completed or blocking_kyc_completed must also be TRUE.
---   AND kyc.profile_id IS NOT NULL
--- 2. IPRoyal proxy: fellows using IPRoyal residential proxy must NOT be allocated to Otter projects.
---   AND ope.profile_id IS NULL
+-- OTTER ELIGIBILITY ONLY: Add BOTH lines below when the user is allocating to an Otter project.
+-- These are NOT applied for HAI-only projects.
+--   AND kyc.profile_id IS NOT NULL       -- KYC verified (profiles.status alone is insufficient)
+--   AND ope.profile_id IS NULL           -- Not using IPRoyal residential proxy
 ```
 
 ---

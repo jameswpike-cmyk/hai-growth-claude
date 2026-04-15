@@ -283,6 +283,8 @@ Criteria varies per project (education, domain, experience, location). Follow th
 
 If the user is just searching for fellows by background/skills without mentioning availability, skip this step.
 
+**Before running the query, ask the user: "Is this for an Otter/Feather project?"** If yes, the Otter-specific eligibility filters (KYC verification + IPRoyal proxy exclusion) MUST be applied in the WHERE clause. See `references/eligibility.md` for the exact lines.
+
 **Step 2: Match criteria using dual verification.**
 > **STOP — if you are filtering by education, domain, expertise, or background, you MUST read `references/eligibility.md` § "Education & Background Queries (Dual-Source Rule)" NOW. Do not write SQL until you have read the join patterns.**
 
