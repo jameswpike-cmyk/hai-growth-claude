@@ -2,7 +2,9 @@
 
 **MANDATORY: Any query about "eligible", "available", or "who can work on X" MUST apply this full filter.**
 
-**MANDATORY FOR OTTER: Any query about Otter eligibility MUST join `hai_dev.hai_kyc_fact` and filter `WHERE kyc_completed IS TRUE OR blocking_kyc_completed IS TRUE`. A fellow can have `hai_public.profiles.status = 'verified'` without having completed KYC due to a legacy silent KYC workflow — those users must NOT be considered Otter-eligible.**
+**MANDATORY FOR OTTER: Any query about Otter eligibility MUST apply BOTH of these filters:**
+1. **KYC check** — join `hai_dev.hai_kyc_fact` and filter `WHERE kyc_completed IS TRUE OR blocking_kyc_completed IS TRUE`. A fellow can have `hai_public.profiles.status = 'verified'` without having completed KYC due to a legacy silent KYC workflow — those users must NOT be considered Otter-eligible.
+2. **IPRoyal proxy exclusion** — anti-join `hai_dev.user_hourly_ip` (UNNEST `spur_operator`) to exclude fellows using IPRoyal residential proxy. These users must NOT be allocated to any Otter project.
 
 **KYC Types (4 total):**
 - **Persona KYC** — standard KYC flow all users go through during GO
@@ -63,6 +65,15 @@ kyc AS (
   WHERE kyc_completed IS TRUE OR blocking_kyc_completed IS TRUE
 ),
 
+otter_project_exclusion AS (
+  SELECT DISTINCT p.id AS profile_id
+  FROM `hs-ai-production.hai_dev.user_hourly_ip` ip,
+  UNNEST(ip.spur_operator) AS operator
+  LEFT JOIN `hs-ai-production.hai_public.profiles` p
+    ON ip.user_id = p.handshake_user_id
+  WHERE LOWER(operator) LIKE 'iproyal_proxy'
+),
+
 survey_opt AS (
   SELECT profile_id, CAST(requires_opt_or_cpt_sponsorship AS STRING) AS opt
   FROM `hs-ai-production.hai_public.survey_responses`
@@ -96,7 +107,8 @@ SELECT
   CASE WHEN oh.profile_id IS NOT NULL THEN TRUE ELSE FALSE END AS on_hold, -- 15
   COALESCE(s.opt, 'false') AS opt_cpt,                                     -- 16
   bfs.country_code,                                                        -- 17
-  CASE WHEN kyc.profile_id IS NOT NULL THEN TRUE ELSE FALSE END AS otter_kyc_verified  -- 18
+  CASE WHEN kyc.profile_id IS NOT NULL THEN TRUE ELSE FALSE END AS otter_kyc_verified,  -- 18
+  CASE WHEN ope.profile_id IS NOT NULL THEN TRUE ELSE FALSE END AS iproyal_proxy_flag   -- 19
 
   -- Add criteria confirmation columns here (e.g., major, resume_degree)
   -- Add custom columns here
@@ -107,6 +119,7 @@ INNER JOIN availability a ON dim.profile_id = CAST(a.profile_id AS STRING)
 LEFT JOIN on_hold oh ON CAST(oh.profile_id AS STRING) = dim.profile_id
 LEFT JOIN survey_opt s ON CAST(s.profile_id AS STRING) = dim.profile_id
 LEFT JOIN kyc ON CAST(kyc.profile_id AS STRING) = dim.profile_id
+LEFT JOIN otter_project_exclusion ope ON CAST(ope.profile_id AS STRING) = dim.profile_id
 
 WHERE a.available IN ('Available - Idle', 'Available - Project Paused')
   AND a.otter_ringfenced = FALSE
@@ -115,10 +128,11 @@ WHERE a.available IN ('Available - Idle', 'Available - Project Paused')
   AND (LOWER(bfs.country_code) LIKE '%us%' OR LOWER(bfs.country_code) LIKE '%united states%')
   AND NOT LOWER(bfs.email) LIKE '%@joinhandshake.com%'
 
--- OTTER ELIGIBILITY: MUST add the following line when querying for Otter eligibility.
--- hai_public.profiles.status = 'verified' is NOT sufficient — kyc_completed or blocking_kyc_completed must also be TRUE.
--- Do NOT rely on otter_kyc_verified column alone; enforce this in the WHERE clause:
+-- OTTER ELIGIBILITY: MUST add BOTH of the following lines when querying for Otter eligibility.
+-- 1. KYC: hai_public.profiles.status = 'verified' is NOT sufficient — kyc_completed or blocking_kyc_completed must also be TRUE.
 --   AND kyc.profile_id IS NOT NULL
+-- 2. IPRoyal proxy: fellows using IPRoyal residential proxy must NOT be allocated to Otter projects.
+--   AND ope.profile_id IS NULL
 ```
 
 ---
@@ -130,6 +144,7 @@ WHERE a.available IN ('Available - Idle', 'Available - Project Paused')
 | Verified & onboarded | `hai_public.profiles` | `status = 'verified'` AND `current_onboarding_stage = 'fully-onboarded'` |
 | Available (idle) | `hai_dev.fact_fellow_status` | No activity in 20+ days, OR offboarded, OR project paused |
 | Otter KYC verified | `hai_dev.hai_kyc_fact` | `kyc_completed IS TRUE OR blocking_kyc_completed IS TRUE` (required for Otter eligibility — note: `profiles.status = 'verified'` alone is insufficient due to legacy silent KYC) |
+| Not IPRoyal proxy | `hai_dev.user_hourly_ip` | UNNEST `spur_operator`, exclude where `LOWER(operator) LIKE 'iproyal_proxy'` (required for Otter eligibility — fellows using IPRoyal residential proxy must not be allocated to Otter projects) |
 | Not Otter-ringfenced | `hai_dev.fact_fellow_status` | No Otter activity in last 30 days |
 | Not on hold | `hs-ai-sandbox.hai_dev.hai_on_hold` | profile_id not in on-hold sheet (sheet uses profile_id as PK, not email) |
 | No OPT/CPT needed | `hai_public.survey_responses` | `requires_opt_or_cpt_sponsorship` is false or null |
