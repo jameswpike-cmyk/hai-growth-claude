@@ -48,10 +48,6 @@ allowed_commands:
 
 # Growth Team Data Layer
 
-> **CRITICAL — READ THIS FIRST:** All `references/*.md` files in this skill must be read using the full absolute path:
-> `/Users/james.pike/hai-growth-claude/plugins/growth-claude/skills/growth-claude/references/<filename>`
-> The working directory is the user's Google Drive. The Read tool does NOT expand `~`. Relative paths and `~/` will always fail.
-
 ## Prerequisites
 
 **Verify these every time this skill is invoked.**
@@ -83,27 +79,13 @@ These commands will open a browser for the user to complete OAuth. Wait for each
 
 **`--enable-gdrive-access` is required** — the eligibility filter queries `hai_on_hold`, a Google Sheets-backed table that needs Drive OAuth scope.
 
-### 4. Read reference files using absolute paths
-The working directory is the user's Google Drive — NOT the skill directory. The Read tool does NOT expand `~`. You MUST use the full absolute path for every reference file:
+### 4. Present query plan for approval (once)
+**Before running your first `bq query`, present the user with a plan and get approval:**
+- Which table(s) will be queried
+- Key filters and logic
+- What the output will look like
 
-```
-/Users/james.pike/hai-growth-claude/plugins/growth-claude/skills/growth-claude/references/<filename>
-```
-
-**Examples:**
-- `references/eligibility.md` → `/Users/james.pike/hai-growth-claude/plugins/growth-claude/skills/growth-claude/references/eligibility.md`
-- `references/query-patterns.md` → `/Users/james.pike/hai-growth-claude/plugins/growth-claude/skills/growth-claude/references/query-patterns.md`
-
-Every time this skill says to read `references/foo.md`, translate that to the full path above. Using a relative path or `~/` prefix will always fail with "File does not exist".
-
-### 5. Present query plan for approval (once)
-**Before running your first `bq query`, present the user with a plan and get approval.**
-
-For **standard eligibility/fellow search queries** (clear criteria, no ambiguity): present a brief inline bullet-point plan in your response — no need to use `EnterPlanMode`. This keeps the flow fast.
-
-For **complex or ambiguous queries** (multiple approaches, unclear scope, destructive ops): use `EnterPlanMode` for full plan review.
-
-In either case, once the user approves, proceed with execution — do not ask for approval again for follow-up queries within the same task (e.g., retries, refinements, exports, or verification queries).
+Use `EnterPlanMode` and wait for approval before executing. Once the user approves the plan, proceed with execution — do not ask for approval again for follow-up queries within the same task (e.g., retries, refinements, exports, or verification queries).
 
 ---
 
@@ -131,8 +113,8 @@ User asks about...
 │
 ├─ funnel flags, Census sync, Fivetran sync, drip comms, Iterable segments, screener flags
 │   → STOP. Read references/onboarding-funnel-drip-campaign-setup.md NOW.
-│   → Generates two ready-to-paste queries: BQ analysis query + Fivetran sync query.
-│   → Ask user: project_id, slug, and whether project uses Otter/Feather screener.
+│   → Event-driven sync: one row per (fellow × milestone), keyed by deterministic event_id.
+│   → Ask user: project_id, slug, assessment y/n, and whether project uses Otter/Feather screener.
 │
 ├─ paid marketing spend, impressions, clicks, CTR, CPM, cross-channel spend
 │   → STOP. Read references/fact-paid-marketing.md NOW. Unified table across LinkedIn, Meta, Reddit, Google.
@@ -184,7 +166,7 @@ User asks about...
 | **Education, degrees, background** | [references/eligibility.md](references/eligibility.md) — contains the Dual-Source Rule: you must query BOTH `hai_profiles_dim` AND `hai_public.resumes`. |
 | **Approval rates, fellow counts** | [references/query-patterns.md](references/query-patterns.md) § "Approval Rates by Project", § "Active Fellow Counts" |
 | **Onboarding funnel** | [references/query-patterns.md](references/query-patterns.md) § "Funnel Analysis & Drop-Off" |
-| **Funnel flags, Census/Fivetran sync, drip comms queries, screener flags** | [references/onboarding-funnel-drip-campaign-setup.md](references/onboarding-funnel-drip-campaign-setup.md) — **MANDATORY.** Contains BQ + Fivetran query templates for HAI-only and Otter projects. Ask user for project_id, slug, and Otter y/n before generating. |
+| **Funnel flags, Census/Fivetran sync, drip comms queries, screener flags** | [references/onboarding-funnel-drip-campaign-setup.md](references/onboarding-funnel-drip-campaign-setup.md) — **MANDATORY.** Event-driven sync templates (one row per fellow × milestone). Ask user for project_id, slug, assessment y/n, and Otter y/n before generating. |
 | **Resume search (keywords, experience, education)** | [references/query-patterns.md](references/query-patterns.md) § "Resume Keyword Search", § "Resume Experience & Project Extraction" |
 | **Reviewer performance (R1/R2)** | [references/query-patterns.md](references/query-patterns.md) § "Reviewer Performance (R1/R2)" |
 | **Task lifecycle, comments, block values** | [references/query-patterns.md](references/query-patterns.md) § "Task Lifecycle Analysis", § "Comment / Quality Analysis", § "Block Values Analysis" |
@@ -288,15 +270,6 @@ This UNNEST pattern applies to any multi-field resume search: company + title, s
 
 ### CSV Export: Avoid Security Warnings
 Do NOT use `cat` heredocs or `$()` command substitution for CSV export — these trigger Claude Code security prompts. Use `printf` + `bq query >> file` as shown in the Google Drive CSV Export section.
-
-### BQ Default Row Limit
-`bq query` silently caps output at **100 rows** by default. Always add `--max_rows=50000` to every `bq query` call for ops/fellow exports:
-```bash
-bq query --use_legacy_sql=false --format=csv --max_rows=50000 <<'EOF' >> file.csv
-...
-EOF
-```
-Failing to set this means the CSV will silently truncate at 100 rows with no error.
 
 ---
 
@@ -484,13 +457,12 @@ printf '# source_tables: <tables>\n# query_date: YYYY-MM-DD\n# query: <summary>\
 
 ### Step 4: Run query and append results
 ```bash
-bq query --format=csv --use_legacy_sql=false --max_rows=50000 <<'EOF' >> "<path>/YYYY-MM-DD_<description>.csv"
+bq query --format=csv --use_legacy_sql=false <<'EOF' >> "<path>/YYYY-MM-DD_<description>.csv"
 SELECT ...
 EOF
 ```
-**`--max_rows=50000` is required** — without it, bq silently truncates to 100 rows. Do NOT run a separate count query first; just run the export directly.
 
-### Step 5: Report row count
+### Step 5: Append row count
 ```bash
 wc -l < "<path>/YYYY-MM-DD_<description>.csv"
 ```
@@ -500,7 +472,6 @@ Report the row count to the user (subtract 4 for the metadata header lines + CSV
 - **File naming**: `YYYY-MM-DD_<description>.csv` (lowercase, hyphens, max 60 chars)
 - **Metadata header is required**: every CSV must start with `# source_tables`, `# query_date`, and `# query` lines
 - **Use `printf` for header, heredoc for query, `>>` to append** — do NOT use `cat` heredocs for the metadata, `$()` substitution, or backslash-escaped paths (see Error Prevention)
-- **Always use `--max_rows=50000`** — never omit this flag
 - If export fails, don't block — results are already in the terminal
 
 ---
@@ -526,4 +497,4 @@ Report the row count to the user (subtract 4 for the metadata header lines + CSV
 | [references/lifecycle-comms.md](references/lifecycle-comms.md) | Schema, efficiency rules, and query patterns for `lifecycle_communication_messages` (~13B rows) | Lifecycle comms, email/push engagement, onboarding emails, HAI communications |
 | [references/query-patterns.md](references/query-patterns.md) | Fellow search, resume patterns, funnel analysis, active counts, cross-table joins | You're writing a fellow search, resume, or funnel query |
 | [references/query-patterns-otter.md](references/query-patterns-otter.md) | Otter/Feather SQL patterns: approval rates, campaign health, cross-table joins | You're writing any Otter or Feather SQL |
-| [references/onboarding-funnel-drip-campaign-setup.md](references/onboarding-funnel-drip-campaign-setup.md) | BQ analysis + Fivetran sync query templates for HAI and Otter onboarding funnel flags | User asks for funnel flags, Census sync query, Iterable drip segments, or screener step flags |
+| [references/onboarding-funnel-drip-campaign-setup.md](references/onboarding-funnel-drip-campaign-setup.md) | Event-driven drip sync templates (one row per fellow × milestone, keyed by event_id). HAI-only and HAI+Otter variants. | User asks for funnel flags, Census sync query, Iterable drip segments, or screener step flags |
