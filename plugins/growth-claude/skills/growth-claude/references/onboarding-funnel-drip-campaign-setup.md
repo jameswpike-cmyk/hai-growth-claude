@@ -53,6 +53,33 @@ When the user asks for a drip sync query, ask:
    - **No** — generate HAI-only event query
    - **Yes** — also ask for screener campaign name + production campaign name, then auto-discover steps (see Otter Extension below)
 
+### Project-Active Gate (always applied)
+
+Drip events should only fire while the annotation project itself is **active**. The project-level status lives in `hai_public.annotation_projects.status`. The base CTE must join this table and filter on it so that paused or ended projects do not generate drip events.
+
+**Known status values** (as of 2026-04-17): `active`, `paused`, `ended`. Filter on `= 'active'`.
+
+Sample lookup to confirm the project's current status before running the sync:
+
+```sql
+SELECT id AS project_id, name AS project_name, status
+FROM `handshake-production.hai_public.annotation_projects`
+WHERE id = '[project_id]'
+```
+
+In the `base` CTE, add:
+
+```sql
+JOIN `handshake-production.hai_public.annotation_projects` ap
+  ON ap.id = f.project_id
+...
+WHERE f.project_id = '[project_id]'
+  AND ap.status = 'active'        -- project-level gate: pause/archive stops all drip events
+  AND f.pso_allocated_pst IS NOT NULL
+```
+
+Also expose `ap.status AS project_status` as a context column in `base` so it can be inspected downstream. Unlike `offboarded` (which is fellow-level and fans out as its own event), `project_status` is a global filter — when the project is not `active`, the entire query returns zero rows and no events are emitted.
+
 ---
 
 ## Standard Identity Columns (all queries)
@@ -119,6 +146,7 @@ base AS (
         f.profile_id,
         f.email,
         f.profile_status,
+        ap.status AS project_status,
         dim.current_onboarding_stage,
         ug.last_touch_utm_source,
         CAST(fs.last_activity AS DATE) AS last_activity,
@@ -134,6 +162,8 @@ base AS (
         f.first_task_submitted_pst IS NOT NULL            AS first_task_submitted_flag
 
     FROM `handshake-production.hai_dev.fact_project_funnel` f
+    JOIN `handshake-production.hai_public.annotation_projects` ap
+      ON ap.id = f.project_id
     LEFT JOIN `handshake-production.hai_dev.hai_profiles_dim` dim
       ON f.profile_id = dim.profile_id
     LEFT JOIN `handshake-production.hai_dev.hai_user_growth_dim` ug
@@ -143,6 +173,7 @@ base AS (
     LEFT JOIN `handshake-production.hai_dev.fact_fellow_status` fs
       ON f.profile_id = fs.profile_id
     WHERE f.project_id = '[project_id]'
+      AND ap.status = 'active'
       AND f.pso_allocated_pst IS NOT NULL
 )
 
@@ -271,6 +302,7 @@ base AS (
         f.profile_id,
         f.email,
         f.profile_status,
+        ap.status AS project_status,
         dim.current_onboarding_stage,
         ug.last_touch_utm_source,
         CAST(fs.last_activity AS DATE) AS last_activity,
@@ -286,6 +318,8 @@ base AS (
         f.first_task_submitted_pst IS NOT NULL            AS first_task_submitted_flag
 
     FROM `handshake-production.hai_dev.fact_project_funnel` f
+    JOIN `handshake-production.hai_public.annotation_projects` ap
+      ON ap.id = f.project_id
     LEFT JOIN `handshake-production.hai_dev.hai_profiles_dim` dim
       ON f.profile_id = dim.profile_id
     LEFT JOIN `handshake-production.hai_dev.hai_user_growth_dim` ug
@@ -295,6 +329,7 @@ base AS (
     LEFT JOIN `handshake-production.hai_dev.fact_fellow_status` fs
       ON f.profile_id = fs.profile_id
     WHERE f.project_id = '[project_id]'
+      AND ap.status = 'active'
       AND f.pso_allocated_pst IS NOT NULL
 ),
 screener_otter AS (
