@@ -27,6 +27,10 @@ allowed_commands:
   - gcloud auth login --enable-gdrive-access
   - gcloud auth application-default login
   - brew install --cask gcloud-cli
+  - brew install uv
+  - claude mcp list*
+  - claude mcp add*
+  - uvx*
   - bq
   - bq query*
   - bq show*
@@ -59,13 +63,51 @@ cd ~/hai-growth-claude && git pull
 ```
 If the pull succeeds, continue. If it fails (e.g. no network, auth issue), note it to the user and continue with local files.
 
-### 2. Check gcloud is installed
+### 2. Verify BigQuery MCP server is registered (preferred for queries)
+The BigQuery MCP exposes `mcp__bigquery__execute-query`, `mcp__bigquery__list-tables`, and `mcp__bigquery__describe-table` — call these directly instead of shelling out to `bq` whenever they're available.
+
+```bash
+claude mcp list 2>&1 | grep -i bigquery
+```
+Expected:
+```
+bigquery: uvx mcp-server-bigquery --project hs-ai-production --location US - ✓ Connected
+```
+
+**If not registered, walk the user through setup:**
+
+a. Confirm `uvx` is installed (ships with `uv`):
+```bash
+which uvx
+```
+If missing, install `uv`:
+```bash
+brew install uv
+```
+
+b. Ask which BQ project to point at. Default to `hs-ai-production` (matches the rest of this skill). Confirm before proceeding — don't assume.
+
+c. Register the server (replace project if the user chose a different one):
+```bash
+claude mcp add bigquery -- uvx mcp-server-bigquery --project hs-ai-production --location US
+```
+
+d. Tell the user to **restart Claude Code** so the new server connects. After restart, the `mcp__bigquery__*` tools become available.
+
+e. Smoke-test once connected:
+```sql
+SELECT 1 AS ok, CURRENT_TIMESTAMP() AS now
+```
+
+**Note:** This skill's examples currently use `bq query` shell commands. Migrating them to call `mcp__bigquery__*` is tracked as a separate follow-up. For now, prefer the MCP tools when present and fall back to `bq` otherwise. Either path still relies on the gcloud credentials checked in Step 4.
+
+### 3. Check gcloud is installed
 ```bash
 gcloud --version
 ```
 If not found: `brew install --cask gcloud-cli`
 
-### 3. Verify credentials (not just cached)
+### 4. Verify credentials (not just cached)
 Do NOT rely on `gcloud auth list` — it shows expired tokens as "active". Test with an actual API call:
 ```bash
 bq show --format=prettyjson hs-ai-production:hai_dev.fact_fellow_perf 2>&1 | head -5
@@ -79,7 +121,7 @@ These commands will open a browser for the user to complete OAuth. Wait for each
 
 **`--enable-gdrive-access` is required** — the eligibility filter queries `hai_on_hold`, a Google Sheets-backed table that needs Drive OAuth scope.
 
-### 4. Present query plan for approval (once)
+### 5. Present query plan for approval (once)
 **Before running your first `bq query`, present the user with a plan and get approval:**
 - Which table(s) will be queried
 - Key filters and logic
