@@ -1,6 +1,6 @@
 # Dimension & Public Table Schemas
 
-**Use this file to look up exact column names, types, and join keys for dimension and public tables (profiles, resumes, growth dim). Never guess column names — find them here first. If a column isn't listed, run `bq show --format=prettyjson PROJECT:SCHEMA.TABLE` to verify against the live schema.**
+**Use this file to look up exact column names, types, and join keys for dimension and public tables (profiles, resumes, growth dim). Never guess column names — find them here first. If a column isn't listed, call `mcp__bigquery__describe-table` with `table_name="dataset.table"` (e.g. `hai_public.profiles`) to verify against the live schema.**
 
 ## Dimension Tables
 

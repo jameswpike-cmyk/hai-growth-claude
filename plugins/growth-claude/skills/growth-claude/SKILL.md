@@ -31,9 +31,6 @@ allowed_commands:
   - claude mcp list*
   - claude mcp add*
   - uvx*
-  - bq
-  - bq query*
-  - bq show*
   - ls /Users/
   - mkdir -p
   - printf
@@ -63,8 +60,13 @@ cd ~/hai-growth-claude && git pull
 ```
 If the pull succeeds, continue. If it fails (e.g. no network, auth issue), note it to the user and continue with local files.
 
-### 2. Verify BigQuery MCP server is registered (preferred for queries)
-The BigQuery MCP exposes `mcp__bigquery__execute-query`, `mcp__bigquery__list-tables`, and `mcp__bigquery__describe-table` — call these directly instead of shelling out to `bq` whenever they're available.
+### 2. Verify BigQuery MCP server is registered (required)
+All queries in this skill run through the BigQuery MCP. It exposes:
+- `mcp__bigquery__execute-query` — run a SELECT
+- `mcp__bigquery__list-tables` — list tables in the configured project
+- `mcp__bigquery__describe-table` — get a table's schema
+
+**Note: the `bq` CLI is blocked in this environment by an enterprise hook.** The MCP is the only supported path. Do not attempt `bq query` / `bq show` — they will be denied.
 
 ```bash
 claude mcp list 2>&1 | grep -i bigquery
@@ -94,35 +96,34 @@ claude mcp add bigquery -- uvx mcp-server-bigquery --project hs-ai-production --
 
 d. Tell the user to **restart Claude Code** so the new server connects. After restart, the `mcp__bigquery__*` tools become available.
 
-e. Smoke-test once connected:
+e. Smoke-test once connected by calling `mcp__bigquery__execute-query` with:
 ```sql
 SELECT 1 AS ok, CURRENT_TIMESTAMP() AS now
 ```
 
-**Note:** This skill's examples currently use `bq query` shell commands. Migrating them to call `mcp__bigquery__*` is tracked as a separate follow-up. For now, prefer the MCP tools when present and fall back to `bq` otherwise. Either path still relies on the gcloud credentials checked in Step 4.
-
 ### 3. Check gcloud is installed
+The MCP server uses gcloud's application-default credentials. The CLI itself isn't called for queries, but `gcloud auth` is still how you sign in.
 ```bash
 gcloud --version
 ```
 If not found: `brew install --cask gcloud-cli`
 
 ### 4. Verify credentials (not just cached)
-Do NOT rely on `gcloud auth list` — it shows expired tokens as "active". Test with an actual API call:
-```bash
-bq show --format=prettyjson hs-ai-production:hai_dev.fact_fellow_perf 2>&1 | head -5
+Do NOT rely on `gcloud auth list` — it shows expired tokens as "active". Test with an actual API call by calling `mcp__bigquery__execute-query` with:
+```sql
+SELECT 1 AS ok
 ```
-If auth error, **run the auth commands directly** — do NOT print them for the user to copy-paste. Execute them in the terminal:
+If that fails with an auth error, **run the auth commands directly** — do NOT print them for the user to copy-paste. Execute them in the terminal:
 ```bash
 gcloud auth login --enable-gdrive-access
 gcloud auth application-default login
 ```
 These commands will open a browser for the user to complete OAuth. Wait for each to finish before proceeding.
 
-**`--enable-gdrive-access` is required** — the eligibility filter queries `hai_on_hold`, a Google Sheets-backed table that needs Drive OAuth scope.
+**`--enable-gdrive-access` is required** — the eligibility filter queries `hai_on_hold`, a Google Sheets-backed table that needs Drive OAuth scope. If a query against a Sheets-backed table fails with a Drive scope error, re-run `gcloud auth login --enable-gdrive-access`.
 
 ### 5. Present query plan for approval (once)
-**Before running your first `bq query`, present the user with a plan and get approval:**
+**Before running your first query, present the user with a plan and get approval:**
 - Which table(s) will be queried
 - Key filters and logic
 - What the output will look like
@@ -219,9 +220,9 @@ User asks about...
 | **Fellow engagement score / engagement tiers** | [references/engagement-score.md](references/engagement-score.md) — classifies fellows into no/low/medium/high engagement from `fact_project_funnel` email open + funnel milestones. |
 | **Lifecycle comms, email comms, push notifications, fellows invited** | [references/lifecycle-comms.md](references/lifecycle-comms.md) — standalone reference. No `profile_id` — join via `user_id` or `email_address`. **~13B rows — always filter by `sent_at`.** |
 | **Reddit ads (spend, targeting, conversions)** | [references/reddit-ads-tables.md](references/reddit-ads-tables.md) for schemas, joins, and query patterns. **Spend is microcurrency.** |
-| **Column names or types** | [references/fact-tables.md](references/fact-tables.md) or [references/dimension-tables.md](references/dimension-tables.md). If still unsure, run `bq show --format=prettyjson PROJECT:SCHEMA.TABLE`. |
+| **Column names or types** | [references/fact-tables.md](references/fact-tables.md) or [references/dimension-tables.md](references/dimension-tables.md). If still unsure, call `mcp__bigquery__describe-table` with `table_name="dataset.table"` (e.g. `hai_dev.fact_fellow_perf`). |
 
-**If BigQuery says "Unrecognized name" — stop, run `bq show` on the table, and find where the column actually lives.**
+**If BigQuery says "Unrecognized name" — stop, call `mcp__bigquery__describe-table` on the table, and find where the column actually lives.**
 
 ---
 
@@ -239,41 +240,33 @@ User asks about...
 
 These are the most common errors users hit. Follow these rules strictly.
 
-### Shell Quoting for bq queries
-**Always wrap SQL in single quotes.** Backticks (for BQ table names) work inside single quotes without escaping. Double quotes + backslash-escaped backticks (`\``) will fail.
+### Running queries via the MCP
+All SQL is passed as the `query` parameter to `mcp__bigquery__execute-query` — it's just a string, no shell quoting, heredocs, or escaping required. Backticks, single quotes, double quotes, and newlines all work as written.
 
-```bash
-# CORRECT — single quotes, backticks just work
-bq query --use_legacy_sql=false --format=csv '
-SELECT * FROM `hs-ai-production.hai_dev.fact_fellow_perf` LIMIT 10
-'
-
-# WRONG — double quotes require escaping backticks, which breaks
-bq query --use_legacy_sql=false --format=csv "
-SELECT * FROM \`hs-ai-production.hai_dev.fact_fellow_perf\` LIMIT 10
-"
-```
-
-If your SQL contains single quotes (e.g., `WHERE status = 'verified'`), you **cannot** nest them inside a single-quoted shell string. Use a heredoc instead:
-```bash
-bq query --use_legacy_sql=false --format=csv <<'EOF'
-SELECT * FROM `hs-ai-production.hai_public.profiles`
+```python
+# Tool call signature
+mcp__bigquery__execute-query(query="""
+SELECT *
+FROM `hs-ai-production.hai_public.profiles`
 WHERE status = 'verified'
-EOF
+LIMIT 10
+""")
 ```
-**Always use `<<'EOF'` (quoted EOF) so the shell does not interpret backticks or variables inside the heredoc.**
+
+**Result format:** the tool returns a Python list of dicts, one per row. Display it to the user as a table or summarize as appropriate. For CSV file export to Drive, see the *Google Drive CSV Export* section below — that path uses Python + `google-cloud-bigquery` directly.
+
+**Result size:** very large results (hundreds of thousands of cells, tens of MB of text) get auto-spilled to a file by the harness and a pointer returned. If you anticipate that, either narrow the query (LIMIT / fewer columns) or use the CSV export path which streams to disk.
 
 ### Project ID: Never run jobs on handshake-production
-Users do NOT have `bigquery.jobs.create` on `handshake-production`. **Always run queries from `hs-ai-production`** (the default project). Reference `handshake-production` tables via fully-qualified names:
-```bash
-# CORRECT — job runs on hs-ai-production, references handshake-production table
-bq query --use_legacy_sql=false '
-SELECT * FROM `handshake-production.hai_dev.fact_comments` LIMIT 10
-'
+Users do NOT have `bigquery.jobs.create` on `handshake-production`. The MCP server is configured with `--project hs-ai-production`, so queries already run from the right project — you only need to make sure cross-project tables are referenced by fully-qualified name:
 
-# WRONG — explicitly sets project to handshake-production
-bq query --project_id=handshake-production --use_legacy_sql=false '...'
+```sql
+-- CORRECT — job runs on hs-ai-production (the MCP's configured project),
+-- references the handshake-production table by fully-qualified name
+SELECT * FROM `handshake-production.hai_dev.fact_comments` LIMIT 10
 ```
+
+If a query errors with `bigquery.jobs.create` denied, check that the MCP server is registered against `hs-ai-production`, not `handshake-production` (`claude mcp list`).
 
 ### Type Mismatches: TIMESTAMP vs DATE
 Never compare TIMESTAMP and DATE directly. Always cast to the same type:
@@ -310,8 +303,8 @@ Use broad `TO_JSON_STRING` LIKE only for single-keyword searches (e.g., "has Rea
 
 This UNNEST pattern applies to any multi-field resume search: company + title, school + degree, etc.
 
-### CSV Export: Avoid Security Warnings
-Do NOT use `cat` heredocs or `$()` command substitution for CSV export — these trigger Claude Code security prompts. Use `printf` + `bq query >> file` as shown in the Google Drive CSV Export section.
+### CSV Export: use the Python helper, not the MCP
+For CSV file export to Drive, use the Python + `google-cloud-bigquery` helper documented in the *Google Drive CSV Export* section below — it streams rows to disk. Do not try to format CSV by hand from `mcp__bigquery__execute-query` results: large result sets exceed the tool-result size limit and the rows you'd be serializing are already loaded into context.
 
 ---
 
@@ -481,42 +474,74 @@ The complete SQL that produces columns 1–17 (CTEs, SELECT, JOINs, and WHERE) i
 
 ## Google Drive CSV Export
 
-**When the user asks to export results to CSV, you MUST follow this exact template.**
+**When the user asks to export results to CSV, you MUST follow this exact template.** Because the `bq` CLI is blocked, CSV export uses Python + `google-cloud-bigquery` (which uses the same gcloud application-default credentials as the MCP).
 
 ### Step 1: Detect Google Drive
 ```bash
 ls /Users/*/Library/CloudStorage/GoogleDrive-* 2>/dev/null
 ```
-If no Drive found, skip export (results are already in the terminal).
+If no Drive found, skip export (results are already in the chat).
 
 ### Step 2: Create output folder
 ```bash
 mkdir -p "<gdrive_path>/My Drive/claude-bq"
 ```
 
-### Step 3: Write metadata header
+### Step 3: Verify the BigQuery client library is installed
 ```bash
-printf '# source_tables: <tables>\n# query_date: YYYY-MM-DD\n# query: <summary>\n' > "<path>/YYYY-MM-DD_<description>.csv"
+python3 -c "import google.cloud.bigquery" 2>&1
+```
+If it errors with `ModuleNotFoundError`, install once:
+```bash
+pip3 install google-cloud-bigquery
 ```
 
-### Step 4: Run query and append results
+### Step 4: Run query and stream rows to CSV
+Use `python3 -c '<script>'` with the SQL inlined. This writes the metadata header first, then streams rows so memory stays bounded for large exports.
+
 ```bash
-bq query --format=csv --use_legacy_sql=false <<'EOF' >> "<path>/YYYY-MM-DD_<description>.csv"
+python3 - <<'PY'
+import csv, sys
+from google.cloud import bigquery
+
+OUT = "<gdrive_path>/My Drive/claude-bq/YYYY-MM-DD_<description>.csv"
+SOURCE_TABLES = "<comma-separated source tables>"
+QUERY_DATE = "YYYY-MM-DD"
+QUERY_SUMMARY = "<one-line summary>"
+SQL = """
 SELECT ...
-EOF
+"""
+
+client = bigquery.Client(project="hs-ai-production")
+job = client.query(SQL)
+rows = job.result()  # iterator, doesn't materialize all rows in memory
+
+with open(OUT, "w", newline="") as f:
+    f.write(f"# source_tables: {SOURCE_TABLES}\n")
+    f.write(f"# query_date: {QUERY_DATE}\n")
+    f.write(f"# query: {QUERY_SUMMARY}\n")
+    writer = csv.writer(f)
+    writer.writerow([field.name for field in rows.schema])
+    n = 0
+    for row in rows:
+        writer.writerow(list(row.values()))
+        n += 1
+print(f"wrote {n} data rows to {OUT}")
+PY
 ```
 
-### Step 5: Append row count
+### Step 5: Sanity-check row count
 ```bash
 wc -l < "<path>/YYYY-MM-DD_<description>.csv"
 ```
-Report the row count to the user (subtract 4 for the metadata header lines + CSV column header).
+The Python script also prints the data-row count. The `wc -l` total should equal data rows + 4 (3 metadata lines + 1 CSV header).
 
 ### Rules
 - **File naming**: `YYYY-MM-DD_<description>.csv` (lowercase, hyphens, max 60 chars)
 - **Metadata header is required**: every CSV must start with `# source_tables`, `# query_date`, and `# query` lines
-- **Use `printf` for header, heredoc for query, `>>` to append** — do NOT use `cat` heredocs for the metadata, `$()` substitution, or backslash-escaped paths (see Error Prevention)
-- If export fails, don't block — results are already in the terminal
+- **Use a heredoc-fed `python3 -` script** — do NOT use `$()` substitution or backslash-escaped paths
+- **Project**: keep `bigquery.Client(project="hs-ai-production")` — same project as the MCP
+- If export fails, don't block — results from `mcp__bigquery__execute-query` are already in the chat
 
 ---
 
