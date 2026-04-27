@@ -12,7 +12,7 @@
       "name": "growth-claude",
       "source": "./plugins/growth-claude",
       "description": "Growth team data layer for querying, analyzing, and actioning marketing and fellow data",
-      "version": "1.5.11",
+      "version": "1.5.12",
       "category": "data"
     }
   ]
